@@ -15,6 +15,7 @@ try {
         blockedFriends: [type.string()],
         ModifyDate: type.date(),
         ModifyPicDate: type.date(),
+        isTempUser: type.boolean(),
         publicInfo: {
             fullName: type.string(),
             mail: type.string(),

@@ -50,6 +50,7 @@ this.runConversations = function (socket, sockets, logger) {
                                         phoneNumber: phoneNumber,
                                         ModifyDate: now,
                                         ModifyPicDate: now,
+                                        isTempUser: true,
                                         publicInfo: {
                                             fullName: fullName
                                         }

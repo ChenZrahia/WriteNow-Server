@@ -27,10 +27,9 @@ try {
     console.log(e);
 }
 
+schema.User.get('07df1b8a-4aaf-4b41-906f-72db804e10b2').update({isTempUser: true}).run();
 
- schema.Conversation.getJoin({ participates: true, messages: true }).filter({id: '733efa6d-201c-45e5-9026-6d3129ce8c7e'}).execute().then((result) => {
-     console.log(result);
- });
+schema.User.get('1ad84c2b-2c81-463a-8036-9ec44d95fa70').delete().run();
 
             // try {
             //     schema.Conversation.getJoin({ participates: true, messages: true }).filter(function (con) {
