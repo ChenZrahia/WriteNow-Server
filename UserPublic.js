@@ -12,8 +12,7 @@ this.runUserPublic = function (socket) {
                             console.log('User Alradey Exist!');
                         }
                         else {
-                            console.log(result[0]);
-                            if (result[0].isTempUser == true) {
+                            if (result.length > 0 && result[0].isTempUser == true) {
                                 schema.User.get(result[0].id).update({isTempUser: false}).run();
                                 if (result[0] && callback) {
                                     callback(result[0]);

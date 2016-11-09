@@ -18,11 +18,11 @@ this.isUserExist = function (uid, callback) {
                     return;
                 }
             } catch (e) {
-                errorHandler.WriteError('isUserExist => schema.User.filter', e);
+                errorHandler.WriteError('(Users.js) => isUserExist => schema.User.filter', e);
             }
 
         }).error(function (err){
-            errorHandler.WriteError('isUserExist => schema.User.filter => error', err);
+            errorHandler.WriteError('(Users.js) => isUserExist => schema.User.filter => error', err);
         });
     } catch (e) {
         errorHandler.WriteError('isUserExist', e);
@@ -172,7 +172,7 @@ this.runUser = function (socket, sockets) {
             }
         });
 
-        socket.on('addFriend', function (Fuid, callback, ErrorCallback) {
+        socket.on('addFriend', function (Fuid, callback, ErrorCallback) { //delete?
             try {
                 if (socket.handshake.query.uid != Fuid) {
                     //schema.User.get(socket.handshake.query.uid).addRelation("friends", { id: Fuid });
