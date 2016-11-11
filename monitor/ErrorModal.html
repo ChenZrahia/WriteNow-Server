@@ -1,0 +1,27 @@
+<div class="modal-content" uib-modal-transclude=""><div class="modal-header ng-scope">
+        <h3 class="modal-title" id="modal-title">Error Details - {{vm.err.displayTime}}</h3>
+    </div>
+    <div class="modal-body ng-scope" id="modal-body" style="display:inline-block; width:100%">
+        <div class="panel panel-info" style="width:100%; float: none;display: inline-block;">
+            <div class="panel-heading">
+                <h3 class="panel-title">Stack Trace</h3>
+            </div>
+            <div class="panel-body">
+                <pre>{{vm.err.stackTrace}}</pre>
+            </div>
+        </div>
+                        <br/>
+        <div class="panel panel-info" style="width:100%; float: none;display: inline-block;">
+            <div class="panel-heading">
+                <h3 class="panel-title">Message</h3>
+            </div>
+            <div class="panel-body">
+                <pre>{{vm.err.message}}</pre>
+            </div>
+        </div>
+        
+    </div>
+    <div class="modal-footer ng-scope">
+        <button class="btn btn-info" type="button" ng-click="vm.close()">Close</button>
+    </div>
+</div>
