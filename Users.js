@@ -31,6 +31,22 @@ this.isUserExist = function (uid, callback) {
 
 this.runUser = function (socket, sockets) {
     try {
+        socket.on('getUsers', function (users, callback) {
+            console.log(users);console.log('users');
+            try {
+                if (callback) {
+                    schema.User.filter((usr) => {
+                        return schema.r.expr(users).contains(usr("id"));
+                    }).run().then((result) => {
+                        console.log(result);
+                        callback(result);
+                    });
+                }
+            } catch (e) {
+                errorHandler.WriteError('on getUsers', e);
+            }
+        });
+        
         socket.on('SearchUser', function (name, callback) {
             try {
                 schema.User.get(socket.handshake.query.uid).getJoin({ friends: true }).execute().then(function (myUser) {

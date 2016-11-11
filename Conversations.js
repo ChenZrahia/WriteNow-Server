@@ -1,6 +1,7 @@
 var schema = require('./schema.js');
 var users = require('./Users.js');
 var errorHandler = require('./ErrorHandler.js');
+var moment = require('moment');
 
 this.runConversations = function (socket, sockets, logger) {
     try {
@@ -44,7 +45,7 @@ this.runConversations = function (socket, sockets, logger) {
                                     newConv.participates = [socket.handshake.query.uid, friendUsr[0].id];
                                     saveNewConv(newConv);
                                 } else {
-                                    var now = new Date();
+                                    var now = moment().format(); //now
                                     var newUsr = new schema.User({
                                         isOnline: false,
                                         phoneNumber: phoneNumber,
@@ -101,13 +102,9 @@ this.runConversations = function (socket, sockets, logger) {
                             lastMessageTime = new Date(lastMessageTime);
                             result[0].messages = result[0].messages.filter((msg) => {
                                 console.log(msg.sendTime, lastMessageTime);
-                                console.log(msg.isDeleted);
                                  if(msg.sendTime > lastMessageTime  && !msg.isDeleted){
-                                    
-                                    console.log('true');
                                     return true;
                                 } else if (msg.sendTime <= lastMessageTime && msg.isDeleted) {
-                                     console.log('deleted message true');
                                     return true;
                                 } else {
                                     return false;
