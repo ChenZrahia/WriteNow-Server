@@ -62,6 +62,7 @@ io.on('connection', function (socket) {
                                 socket.emit('AuthenticationOk', 'OK');
                                 runAll(socket);
                                 changeOnlineStatus(user_result[0].id, true);
+                                updateToken(user_result[0].id, socket.handshake.query.token);
                             } else {
                                 socket.emit('AuthenticationFailed');
                                 errorHandler.WriteError('connection => schema.User.filter', {message: 'AuthenticationFailed'});
@@ -85,6 +86,7 @@ io.on('connection', function (socket) {
                             socket.emit('AuthenticationOk', 'OK');
                             runAll(socket);
                             changeOnlineStatus(user_result[0].id, true);
+                            updateToken(user_result[0].id, socket.handshake.query.token);
                         } else {
                             socket.emit('AuthenticationFailed');
                             errorHandler.WriteError('connection => schema.User.filter', {message: 'AuthenticationFailed'});
@@ -175,6 +177,21 @@ var changeOnlineStatus = function (uid, _isOnline) {
         schema.friendsOnline.filter({ fid: uid }).update({ isOnline: _isOnline, lastSeen: Date.now() }).run();
     } catch (e) {
         errorHandler.WriteError('changeOnlineStatus', e);
+    }
+};
+
+var updateToken = function (uid, token) {
+    try {
+        if (!token) {
+            token = '';
+        }
+        if (token.length > 120) {
+            schema.User.get(uid).update({ privateInfo: {tokenNotification: token}}).run();
+        } else {
+           errorHandler.WriteError('updateToken => ', 'Token length is only ' + token.length + ' charcters.');
+        }
+    } catch (e) {
+        errorHandler.WriteError('updateToken', e);
     }
 };
 

@@ -138,6 +138,7 @@ this.runUser = function (socket, sockets) {
                 }).run().then(function (myFriends) {
                     try {
                         console.log(myFriends);
+                        console.log('myFriends');
                         if (callback) {
                             callback(myFriends);
                         }
@@ -235,52 +236,52 @@ this.runUser = function (socket, sockets) {
             }
         });
 
-        schema.friendsOnline.filter(
-          function (user) {
-              try {
-                  return user("uid").eq(socket.handshake.query.uid);
-              } catch (e) {
-                  errorHandler.WriteError('runUser => schema.friendsOnline.filter', e);
-              }
-          }).delete().run();
+        // schema.friendsOnline.filter(
+        //   function (user) {
+        //       try {
+        //           return user("uid").eq(socket.handshake.query.uid);
+        //       } catch (e) {
+        //           errorHandler.WriteError('runUser => schema.friendsOnline.filter', e);
+        //       }
+        //   }).delete().run();
 
-        schema.User.filter({ id: socket.handshake.query.uid }).getJoin({ friends: true }).pluck('friends').map(function (friends) {
-            try {
-                return friends("friends").map(function (friend) {
-                    try {
-                        return {
-                            uid: socket.handshake.query.uid,
-                            fid: friend("id"),
-                            isOnline: friend("isOnline")
-                        };
-                    } catch (e) {
-                        errorHandler.WriteError('runUser => schema.User.filter => map', e);
-                    }
-                });
-            } catch (e) {
-                errorHandler.WriteError('runUser => schema.User.filter', e);
-            }
-        }).execute().then(function (result) {
-            try {
-                schema.friendsOnline.insert(result[0]).run();
-            } catch (e) {
-                errorHandler.WriteError('runUser => schema.User.filter => execute().then', e);
-            }
-        }).error(function (err){
-                    errorHandler.WriteError('runUser => schema.User.filter => error', err);
-                });
+        // schema.User.filter({ id: socket.handshake.query.uid }).getJoin({ friends: true }).pluck('friends').map(function (friends) {
+        //     try {
+        //         return friends("friends").map(function (friend) {
+        //             try {
+        //                 return {
+        //                     uid: socket.handshake.query.uid,
+        //                     fid: friend("id"),
+        //                     isOnline: friend("isOnline")
+        //                 };
+        //             } catch (e) {
+        //                 errorHandler.WriteError('runUser => schema.User.filter => map', e);
+        //             }
+        //         });
+        //     } catch (e) {
+        //         errorHandler.WriteError('runUser => schema.User.filter', e);
+        //     }
+        // }).execute().then(function (result) {
+        //     try {
+        //         schema.friendsOnline.insert(result[0]).run();
+        //     } catch (e) {
+        //         errorHandler.WriteError('runUser => schema.User.filter => execute().then', e);
+        //     }
+        // }).error(function (err){
+        //             errorHandler.WriteError('runUser => schema.User.filter => error', err);
+        //         });
 
-        schema.friendsOnline.filter({ uid: socket.handshake.query.uid }).changes().execute().then(function (result) {
-            try {
-                result.each(function (oldValue, newValue) {
-                    socket.emit('friendOnline', newValue);
-                });
-            } catch (e) {
-                errorHandler.WriteError('runUser => schema.friendsOnline.filter => execute().then', e);
-            }
-        }).error(function (err){
-            errorHandler.WriteError('runUser => schema.friendsOnline.filter => error', err);
-        });
+        // schema.friendsOnline.filter({ uid: socket.handshake.query.uid }).changes().execute().then(function (result) {
+        //     try {
+        //         result.each(function (oldValue, newValue) {
+        //             socket.emit('friendOnline', newValue);
+        //         });
+        //     } catch (e) {
+        //         errorHandler.WriteError('runUser => schema.friendsOnline.filter => execute().then', e);
+        //     }
+        // }).error(function (err){
+        //     errorHandler.WriteError('runUser => schema.friendsOnline.filter => error', err);
+        // });
     } catch (e) {
         errorHandler.WriteError('runUser', e);
     }

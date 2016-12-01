@@ -1,5 +1,6 @@
 var schema = require('./schema.js');
 var errorHandler = require('./ErrorHandler.js');
+var moment = require('moment');
 
 this.runUserPublic = function (socket) {
     try {
@@ -13,7 +14,20 @@ this.runUserPublic = function (socket) {
                         }
                         else {
                             if (result.length > 0 && result[0].isTempUser == true) {
-                                schema.User.get(result[0].id).update({isTempUser: false}).run();
+                                schema.User.get(result[0].id).update({
+                                    pkey: user.pkey,
+                                    isOnline: true,
+                                    ModifyDate: moment().format(),
+                                    ModifyPicDate: moment().format(),
+                                    isTempUser: false,
+                                    publicInfo: {
+                                        fullName: user.publicInfo.fullName,
+                                        picture: user.publicInfo.picture
+                                    },
+                                    privateInfo: {
+                                        tokenNotification: user.tokenNotification,
+                                    },
+                                }).run();
                                 if (result[0] && callback) {
                                     callback(result[0]);
                                     return;

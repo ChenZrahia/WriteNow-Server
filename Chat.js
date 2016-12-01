@@ -2,7 +2,7 @@ var schema = require('./schema.js');
 var request = require('request');
 var errorHandler = require('./ErrorHandler.js');
 const token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI5Mzc4MDMyYy1mMGFhLTRmZWYtYmNiNS0yYTc1NzFlNDI5ZmUifQ.khFTEtOOq6_SNBGZwH37zUNiPViQhRGt7-DG9XqeFlw";
-var moment = require('moment');
+var FCM = require('./FCM.js');
 
 var req_json = {
     "method": "POST",
@@ -19,10 +19,11 @@ this.liveConvs = {};
 
 this.runChat = (function(clsObj) { return function(socket, sockets, io){
     try {
-        socket.on('enterChat', function(convId) {
+            socket.on('enterChat', function(convId) {
             try {
                 socket.join(convId);
                 updateSeenMessages(convId);
+                whosOnlineInConv(convId);
             } catch (e) {
                 errorHandler.WriteError('on enterChat', e);
             }
@@ -39,7 +40,6 @@ this.runChat = (function(clsObj) { return function(socket, sockets, io){
         socket.on('typing', function (message) {
             try {
                 message.from = socket.handshake.query.uid;
-                console.log(message);
                 if(!messages[message.mid]){
                     message.startTypingTime = Date.now();
                     messages[message.mid] = message;
@@ -73,7 +73,7 @@ this.runChat = (function(clsObj) { return function(socket, sockets, io){
                     errorHandler.WriteError('on saveMessage => Message.save => error', err);
                 });
                 broadcastToConv('saveMessage', message, message.convId);
-        
+                console.error(message.convId);
                 schema.Conversation.get(message.convId).getJoin({participates: true}).pluck('participates').execute()
                 .then(function(result){
                     try {
@@ -81,41 +81,28 @@ this.runChat = (function(clsObj) { return function(socket, sockets, io){
                             var FromUser = result.participates.filter((user) => { return user.id == message.from });
                             if (FromUser.length == 1 && result.participates) {
                                 var FromName = FromUser[0].publicInfo.fullName;
+                                console.log(result.participates);
                                 schema.r.expr(result.participates).filter(function(user){
                                     try {
                                         return user("id").ne(socket.handshake.query.uid).and(user.hasFields("privateInfo")).and(user("privateInfo").hasFields("tokenNotification"));
                                     } catch (e) {
                                         errorHandler.WriteError('on saveMessage => schema.r.expr(result.participates)..filter', e);
                                     }
-                                }).pluck('privateInfo').map(function(obj){
+                                }).pluck('privateInfo').map((obj) => {
                                     try {
                                         return obj("privateInfo")("tokenNotification");
                                     } catch (e) {
                                         errorHandler.WriteError('on saveMessage => schema.r.expr(result.participates)..map', e);
                                     }
-                                }).run().then(function(tokens){
+                                }).run().then((_tokens) => {
                                     try {
-                                        if (tokens.length > 0) {
-                                            req_json.body= {
-                                                "tokens": tokens,
-                                                "profile": "pushserver",
-                                                "notification": {
-                                                    "title": FromName + ": ",
-                                                    "message": message.content,
-                                                    "android": {
-                                                        "title": FromName + ": ",
-                                                        "message": message.content,
-                                                        "image": "http://previews.123rf.com/images/faysalfarhan/faysalfarhan1501/faysalfarhan150100946/35664985-Chat-icon-purple-glossy-round-button-Stock-Photo.jpg"
-                                                      ,"icon": "chat",
-                                                        "sound": "Icq_Message_Sound"
-                                                    }
-                                                }
-                                            }
-                  
-                                            request(req_json, function(err, response, body) {
-                                                if (err) {
-                                                    errorHandler.WriteError('on saveMessage => request', err);
-                                                }
+                                                  console.log('data2');
+                                                  console.log(_tokens.length);
+                                        if (_tokens.length > 0) {
+                                            FCM.sendNotification({
+                                                tokens: _tokens,
+                                                from: FromName,
+                                                content: message.content
                                             });
                                         }
                                     } catch (e) {
@@ -133,7 +120,64 @@ this.runChat = (function(clsObj) { return function(socket, sockets, io){
             } catch (e) {
                 errorHandler.WriteError('on saveMessage', e);
             }
-        });
+        }); 
+        
+        function whosOnlineInConv(convId)
+        {
+            schema.friendsOnline.filter(
+              function (user) {
+                  try {
+                      return user("uid").eq(socket.handshake.query.uid);
+                  } catch (e) {
+              errorHandler.WriteError('runUser=> schema.friendsOnline.filter', e);
+                  }
+              }).delete().run();
+              
+              //insert
+              schema.Conversation.getJoin({participates: true}).filter({id: convId}).pluck("participates").map(function (participates) {
+            //   .execute().then(function(result){
+                try {
+                    
+                            return participates("participates").map(function (friend) {
+                        try {
+                            //console.log(friend);
+                                return {
+              uid: socket.handshake.query.uid,
+              fid: friend("id"),
+              isOnline: friend("isOnline")
+                                };
+                        } catch (e) {
+              errorHandler.WriteError('runUser=> schema.User.filter => map', e);
+                        }
+                    });
+                } catch (e) {
+              errorHandler.WriteError('runUser=> schema.User.filter', e);
+                }
+            }).execute().then(function (result) {
+                try {
+                    //console.log(result[0]);
+                    schema.friendsOnline.insert(result[0]).run();
+                    
+                    
+                } catch (e) {
+              errorHandler.WriteError('runUser=> schema.User.filter => execute().then', e);
+                }
+            }).error(function (err){
+              errorHandler.WriteError('runUser=> schema.User.filter => error', err);
+                    });
+                    
+            schema.friendsOnline.filter({ uid: socket.handshake.query.uid }).changes().execute().then(function (result) {
+                try {
+                    result.each((oldValue, newValue) => {
+                        socket.emit('friendOnline', newValue);
+                    });
+                } catch (e) {
+                    errorHandler.WriteError('runUser => schema.friendsOnline.filter => execute().then', e);
+                }
+            }).error(function (err){
+                errorHandler.WriteError('runUser => schema.friendsOnline.filter => error', err);
+            });
+        }
         
         function updateSeenMessages(convId)
         {

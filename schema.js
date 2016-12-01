@@ -18,14 +18,11 @@ try {
         isTempUser: type.boolean(),
         publicInfo: {
             fullName: type.string(),
-            mail: type.string(),
-            picture: type.string(),
-            gender: type.string()
+            picture: type.string()
         },
         privateInfo: {
             tokenNotification: type.string()
-        },
-        Conversations: [type.string()]
+        }
     });
 
     this.Conversation = thinky.createModel('Conversation', {
@@ -44,6 +41,7 @@ try {
         from: type.string(), 
         to: type.string(), //למחוק
         content: type.string(),
+        image: type.string(),
         sendTime: type.date(),
         lastTypingTime: type.date(),
         seen: [{ uid: type.string(), when: type.date() }], //array of all users that read the messages

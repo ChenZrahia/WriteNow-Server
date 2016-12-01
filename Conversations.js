@@ -7,7 +7,6 @@ this.runConversations = function (socket, sockets, logger) {
     try {
         var GetConvByContact = function (phoneNumber, fullName) {
             try {
-                console.log(' GetConvByContact 2 ' + phoneNumber + fullName);
                 schema.Conversation.getJoin({ participates: true, messages: true }).filter(function (conv) {
                     try {
                         return conv("isGroup").eq(false).and(conv("participates").count().eq(2)).and(
@@ -22,6 +21,8 @@ this.runConversations = function (socket, sockets, logger) {
                                 return {id: user.id};
                             });
                             var res = result[0];
+                            console.log(res);
+                            console.log('res');
                             socket.emit('returnConv', res);
                         }
                         else {
@@ -30,11 +31,19 @@ this.runConversations = function (socket, sockets, logger) {
                                 manager: socket.handshake.query.uid,
                                 isGroup: false
                             });
-                            function saveNewConv(newConv){
+                            function saveNewConv(newConv, newUsr){
                                 newConv.saveAll({ participates: true }).then(function (result) {
-                                    result.participates = result.participates.map((conv) => {
-                                        return {id: conv.id};
+                                    result.participates = result.participates.map((usr) => {
+                                        return {id: usr.id};
                                     });
+                                    if (newUsr) {
+                                        result.newUsr = {
+                                            id: newUsr.id,
+                                            phoneNumber: newUsr.phoneNumber
+                                        };
+                                    }
+                                    console.log(result);
+                                    console.log('result');
                                     socket.emit('returnConv', result);
                                 }).error(function (err) {
                                     errorHandler.WriteError('GetConvByContact => newConv.saveAll', err);
@@ -58,7 +67,7 @@ this.runConversations = function (socket, sockets, logger) {
                                     });
                                     newUsr.saveAll().then((usr) => {
                                         newConv.participates = [socket.handshake.query.uid, usr.id];
-                                        saveNewConv(newConv);
+                                        saveNewConv(newConv, newUsr);
                                     });
                                 }
                             });
@@ -101,8 +110,10 @@ this.runConversations = function (socket, sockets, logger) {
                         } else {
                             lastMessageTime = new Date(lastMessageTime);
                             result[0].messages = result[0].messages.filter((msg) => {
-                                console.log(msg.sendTime, lastMessageTime);
-                                 if(msg.sendTime > lastMessageTime  && !msg.isDeleted){
+                                //msg.sendTime = new Date(msg.sendTime); 
+                                if (msg.from == socket.handshake.query.uid) {
+                                    return false;
+                                } else if(msg.sendTime > lastMessageTime  && !msg.isDeleted){
                                     return true;
                                 } else if (msg.sendTime <= lastMessageTime && msg.isDeleted) {
                                     return true;
@@ -113,7 +124,11 @@ this.runConversations = function (socket, sockets, logger) {
                         }
                         
                         result[0].participates = result[0].participates.map((user) => {
-                            return {id: user.id};
+                            return {id: user.id,
+                                    isOnline: user.isOnline
+                                };
+                        console.log('result GetConvChangesById:');
+                        console.log(result[0]);
                         });
                         if (callback) {
                             callback(result[0]);
@@ -132,10 +147,15 @@ this.runConversations = function (socket, sockets, logger) {
 
         socket.on('GetConvByContact', function (phoneNumber, fullName) {
             try {
-                console.log(' GetConvByContact 1');
-                GetConvByContact(phoneNumber, fullName);
+                console.log('GetConvByContact');
+                if (phoneNumber && fullName) {
+                    GetConvByContact(phoneNumber, fullName);
+                } else {
+                    errorHandler.WriteError('on GetConvByContact => isUserExist', 'phoneNumber or/and fullName is NULL. phoneNumber: ' + phoneNumber + ' fullName: ' + fullName);
+                }
+                
             } catch (e) {
-                errorHandler.WriteError('on GetConvByContact => isUserExist', 'user not exist');
+                errorHandler.WriteError('on GetConvByContact => isUserExist', e);
             }
         });
 
@@ -190,7 +210,7 @@ this.runConversations = function (socket, sockets, logger) {
                                     } 
                                     return false;
                                 });
-                                if (nameOfSender_Array.length > 0 && nameOfSender_Array[0].publicInfo) {
+                                if (nameOfSender_Array.length > 0 && nameOfSender_Array[0] && nameOfSender_Array[0].publicInfo) {
                                     nameOfSenderName = nameOfSender_Array[0].publicInfo.fullName;
                                 } else {
                                     nameOfSenderName = '';
@@ -216,7 +236,6 @@ this.runConversations = function (socket, sockets, logger) {
         
         function GetAllUserConvChanges(convIdArray, callback) {
             try {
-                console.log('start GetAllUserConvChanges');
                 schema.Conversation.getJoin({ participates: true, messages: true }).filter(function (con) {
                     try {
                         return con("participates")("id").contains(socket.handshake.query.uid);
