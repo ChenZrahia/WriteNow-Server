@@ -28,7 +28,9 @@ var msg = {
   notification: {
     "title": "נוטיפיקישיןןןןןן",
     "body": "אני לא מאמין שזה עובדת!!!",
-    "sound": "default"
+    "sound": "default",
+    badge: 10,
+    number: 10
   },
   data: {
     title: "שגיא שגיא",

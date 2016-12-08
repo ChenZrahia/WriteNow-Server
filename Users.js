@@ -126,7 +126,9 @@ this.runUser = function (socket, sockets) {
         
         socket.on('GetMyFriendsChanges', function (usersToServer, callback) {
             try {
+                console.log('usersToServer');
                 console.log(usersToServer);
+                console.log('usersToServer');
                 var friendUidArray = usersToServer.friendUidArray;
                 var phonesArray = usersToServer.phonesArray.filter((num) => {return num != null});
                 schema.User.filter((usr) => {

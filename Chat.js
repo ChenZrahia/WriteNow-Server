@@ -39,6 +39,7 @@ this.runChat = (function(clsObj) { return function(socket, sockets, io){
     
         socket.on('typing', function (message) {
             try {
+                console.log(message);
                 message.from = socket.handshake.query.uid;
                 if(!messages[message.mid]){
                     message.startTypingTime = Date.now();

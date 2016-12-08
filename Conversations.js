@@ -18,9 +18,13 @@ this.runConversations = function (socket, sockets, logger) {
                     try {
                         if (result && result.length > 0) {
                             result[0].participates = result[0].participates.map((user) => {
-                                return {id: user.id};
+                                return {
+                                    id: user.id,
+                                    phoneNumber: user.phoneNumber
+                                };
                             });
                             var res = result[0];
+                            res.newUsr = result[0].participates;
                             console.log(res);
                             console.log('res');
                             socket.emit('returnConv', res);
@@ -34,7 +38,9 @@ this.runConversations = function (socket, sockets, logger) {
                             function saveNewConv(newConv, newUsr){
                                 newConv.saveAll({ participates: true }).then(function (result) {
                                     result.participates = result.participates.map((usr) => {
-                                        return {id: usr.id};
+                                        console.log(usr);
+                                        console.log('usr.id');
+                                        return {id: usr};
                                     });
                                     if (newUsr) {
                                         result.newUsr = {
@@ -52,7 +58,10 @@ this.runConversations = function (socket, sockets, logger) {
                             schema.User.filter({phoneNumber: phoneNumber}).run().then((friendUsr) => {
                                 if (friendUsr && friendUsr.length > 0) {
                                     newConv.participates = [socket.handshake.query.uid, friendUsr[0].id];
-                                    saveNewConv(newConv);
+                                    saveNewConv(newConv, {
+                                        id: friendUsr[0].id,
+                                        phoneNumber: friendUsr[0].phoneNumber
+                                    });
                                 } else {
                                     var now = moment().format(); //now
                                     var newUsr = new schema.User({
