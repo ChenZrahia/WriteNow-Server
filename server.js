@@ -188,7 +188,7 @@ var updateToken = function (uid, token) {
         if (token.length > 120) {
             schema.User.get(uid).update({ privateInfo: {tokenNotification: token}}).run();
         } else {
-           errorHandler.WriteError('updateToken => ', 'Token length is only ' + token.length + ' charcters.');
+           errorHandler.WriteError('updateToken => ', 'Token length is only ' + token.length + ' charcters. Token: ' + token);
         }
     } catch (e) {
         errorHandler.WriteError('updateToken', e);
@@ -235,6 +235,53 @@ try {
 } catch (e) {
     errorHandler.WriteError('app.use(express.static...)', e);
 }
+
+
+
+function socketIdsInRoom(name) {
+  var socketIds = io.nsps['/'].adapter.rooms[name];
+  if (socketIds) {
+
+    var collection = [];
+    for (var key in socketIds.sockets) {
+      collection.push(key);
+    }
+    return collection;
+  } else {
+    return [];
+  }
+}
+
+
+//------
+io.on('connection', (socket) => {
+  console.log('connection');
+  socket.on('disconnect', () => {
+    console.log('disconnect');
+    if (socket.room) {
+      var room = socket.room;
+      io.to(room).emit('leave', socket.id);
+      socket.leave(room);
+    }
+  });
+
+  socket.on('join', (name, callback) => {
+    var socketIds = socketIdsInRoom(name);
+    callback(socketIds);
+    socket.join(name);
+    socket.room = name;
+  });
+
+
+  socket.on('exchange', (data) => {
+    data.from = socket.id;
+    var to = io.sockets.connected[data.to];
+    to.emit('exchange', data);
+  });
+});
+
+
+//------
 
 process.stdin.resume();//so the program will not close instantly
 

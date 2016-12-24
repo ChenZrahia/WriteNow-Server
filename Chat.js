@@ -19,7 +19,7 @@ this.liveConvs = {};
 
 this.runChat = (function(clsObj) { return function(socket, sockets, io){
     try {
-            socket.on('enterChat', function(convId) {
+        socket.on('enterChat', function(convId) {
             try {
                 socket.join(convId);
                 updateSeenMessages(convId);

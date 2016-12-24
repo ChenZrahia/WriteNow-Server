@@ -55,6 +55,14 @@ try {
         lastSeen: type.date()
     });
     
+    this.LiveChat = thinky.createModel('LiveChat', {
+        id: type.string(),
+        callDateTime: type.date(),
+        callerId: type.string(),
+        receiverId: type.string(),
+        duration: type.date()
+    });
+    
     this.Error = thinky.createModel('Error', {
         id: type.string(),
         message: type.string(),
