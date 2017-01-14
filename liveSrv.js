@@ -52,6 +52,8 @@ io.on('connection', (socket) => {
             }
         });
         
+        
+        
     } catch (e) {
         errorHandler.WriteError('Live Chat => connection', e);
     }

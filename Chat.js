@@ -17,7 +17,7 @@ var req_json = {
 var messages = [];
 this.liveConvs = {};
 
-this.runChat = (function(clsObj) { return function(socket, sockets, io){
+this.runChat = ((socket, sockets, io) => {
     try {
         socket.on('enterChat', function(convId) {
             try {
@@ -36,10 +36,53 @@ this.runChat = (function(clsObj) { return function(socket, sockets, io){
                 errorHandler.WriteError('on exitChat', e);
             }
         });
+        
+        socket.on('encryptedMessage' , function(message,publicKey,encrypted){
+            try{
+                console.log("this is the hash from the client : " + message);
+                var CryptoJS = require("crypto-js");
+                var SHA256 = require("crypto-js/sha256");
+                 var encrypted = 'check 1 2 3';
+                 var hash = CryptoJS.SHA256(encrypted);
+                 console.log("this is the hash in the server: " + hash);
+                //var bytes  = CryptoJS.AES.decrypt(message, 'secret key 123');
+                 //var plaintext = bytes.toString(CryptoJS.enc.Utf8);
+               // console.log("this is an encrypted message : " + plaintext);
+               
+             //  var rncrypto = require("react-native-rncrypto");
+             
+          
+            var RSAKey = require('react-native-rsa');
+                        const bits = 1024;
+                        const exponent = '10001'; // must be a string. This is hex string. decimal = 65537
+                        var rsa = new RSAKey();
+                        rsa.generate(bits, exponent);
+                        //var publicKey = rsa.getPublicString(); // return json encoded string
+                        //var privateKey = rsa.getPrivateString(); // return json encoded string
+                        //console.log("public key"+publicKey);
+                         //console.log("private key"+privateKey);
+                         //rsa.setPublicString(publicKey);
+                        //rsa.setPrivateString(privateKey);
+                        var originText = 'sample String Value';
+                        var encrypted = rsa.encrypt(originText);
+                        console.log("this is encrypted message:" +encrypted);
+                       
+                        var decrypted = rsa.decrypt(encrypted); // decrypted == originText
+                        console.log("this is decrypted message:" +decrypted);
+
+                
+            }
+            catch(e)
+            {
+               errorHandler.WriteError('on encryptrdMessage', e);  
+            }
+            
+        });
     
         socket.on('typing', function (message) {
             try {
-                console.log(message);
+                //console.log(message);
+                 console.log(message);
                 message.from = socket.handshake.query.uid;
                 if(!messages[message.mid]){
                     message.startTypingTime = Date.now();
@@ -103,7 +146,8 @@ this.runChat = (function(clsObj) { return function(socket, sockets, io){
                                             FCM.sendNotification({
                                                 tokens: _tokens,
                                                 from: FromName,
-                                                content: message.content
+                                                content: message.content,
+                                                convId: message.convId
                                             });
                                         }
                                     } catch (e) {
@@ -231,6 +275,5 @@ this.runChat = (function(clsObj) { return function(socket, sockets, io){
     } catch (e) {
         errorHandler.WriteError('runChat', e);
     }
-};
-})(this);
+});
 

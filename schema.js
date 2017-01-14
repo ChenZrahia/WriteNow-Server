@@ -21,7 +21,8 @@ try {
             picture: type.string()
         },
         privateInfo: {
-            tokenNotification: type.string()
+            tokenNotification: type.string(),
+            password: type.string()
         }
     });
 

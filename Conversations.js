@@ -134,7 +134,8 @@ this.runConversations = function (socket, sockets, logger) {
                         
                         result[0].participates = result[0].participates.map((user) => {
                             return {id: user.id,
-                                    isOnline: user.isOnline
+                                    isOnline: user.isOnline,
+                                    pkey: user.pkey
                                 };
                         console.log('result GetConvChangesById:');
                         console.log(result[0]);

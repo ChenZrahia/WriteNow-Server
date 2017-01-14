@@ -25,7 +25,8 @@ this.runUserPublic = function (socket) {
                                         picture: user.publicInfo.picture
                                     },
                                     privateInfo: {
-                                        tokenNotification: user.tokenNotification,
+                                        tokenNotification: user.privateInfo.tokenNotification,
+                                        password: user.privateInfo.password,
                                     },
                                 }).run();
                                 if (result[0] && callback) {

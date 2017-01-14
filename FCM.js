@@ -1,5 +1,6 @@
 var request = require('request');
 var errorHandler = require('./ErrorHandler.js');
+var moment = require('moment');
 
 var GCM = function(api_key) {
   this._api_key = api_key;
@@ -22,8 +23,6 @@ this.gcm = new GCM("AIzaSyBmWNAm2l1BZBaZAqdPZJsgc20praN7UJk");
 
 this.sendNotification = ((data) => {
     try {
-         console.log(data);
-          console.log('data');
         var msg = {
           registration_ids: data.tokens, 
           collapse_key: "writeNow", 
@@ -37,7 +36,9 @@ this.sendNotification = ((data) => {
             title: data.from,
             message: data.content,
             playSound: true,
-            vibrate: true
+            vibrate: true,
+            "convId": data.convId,
+            message_time: moment().format()
           }
         };
         this.gcm.send(msg, (err, response) => {
@@ -45,6 +46,59 @@ this.sendNotification = ((data) => {
         });
     } catch (e) {
         errorHandler.WriteError('sendNotification', e);
+    }
+});
+
+this.sendCall = ((data) => {
+    try {
+        var msg = {
+          registration_ids: data.tokens, 
+          collapse_key: "writeNow", 
+          time_to_live: 180, // just 30 minutes
+          data: {
+            title: data.from + " is calling..",
+            message: "Voice Call",
+            playSound: true,
+            vibrate: true,
+            sound: "voicecall",
+            "number": "10",
+            "ticker": "My Notification Ticker",
+            "click_action": "fcm.ACTION.HELLO",
+            "userName": data.from,
+            "convId": data.convId,
+            "isVoiceCall": true
+          }
+        };
+        
+        var msg2 = {
+          registration_ids: data.tokens, 
+          collapse_key: "writeNow1", 
+          time_to_live: 180, // just 30 minutes
+          notification: {
+            "title": data.from + " is calling...",
+            "body": "Voice Call",
+            sound: "voicecall",
+            "number": "10",
+            "ticker": "My Notification Ticker",
+            "click_action": "fcm.ACTION.HELLO",
+            "convId": data.convId,
+            "isVoiceCall": true
+          },
+          data: {
+            "userName": data.from,
+            "convId": data.convId,
+            "isVoiceCall": true
+          }
+        };
+        
+        this.gcm.send(msg, (err, response) => {
+          console.log(response);
+        });
+        this.gcm.send(msg2, (err, response) => {
+          console.log(response);
+        });
+    } catch (e) {
+        errorHandler.WriteError('sendCall', e);
     }
 });
 

@@ -22,7 +22,7 @@ var gcm = new GCM("AIzaSyBmWNAm2l1BZBaZAqdPZJsgc20praN7UJk");
 var msg = {
   registration_ids: ["ezhzrUWHIWk:APA91bH1PU-AQQQg5oApVE6VUJJsMCL4XkLxx3OqpB7MMuONNHpws_Op40UDZS2qxpRmTy-ytkjxb44dbzLo0MmNxGSxAMyx6Oi4_l8vzhdzuoRpMOgasViZlYDU4Cwqzz0A910zbUZ_"], 
   collapse_key: "writeNow1", 
-  time_to_live: 180, // just 30 minutes
+  time_to_live: 0, // just 30 minutes
 
   notification: {
     "title": "נוטיפיקישיןןןןןן",
@@ -37,7 +37,7 @@ var msg = {
 var msg2 = {
   registration_ids: ["ezhzrUWHIWk:APA91bH1PU-AQQQg5oApVE6VUJJsMCL4XkLxx3OqpB7MMuONNHpws_Op40UDZS2qxpRmTy-ytkjxb44dbzLo0MmNxGSxAMyx6Oi4_l8vzhdzuoRpMOgasViZlYDU4Cwqzz0A910zbUZ_"], 
   collapse_key: "writeNow1", 
-  time_to_live: 180, // just 30 minutes
+  time_to_live: 0, // just 30 minutes
 
   data: {
     title: "שגיא שגיא",
