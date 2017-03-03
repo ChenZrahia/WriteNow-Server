@@ -18,7 +18,10 @@ var monitorsSockets = [];
 io.on('connection', (socket) => {
     try {
         connections++;
+        var _roomId = socket.handshake.query.convId + "Call";
+        socket.join(_roomId);
         console.log('New Live Chat! ' + connections);
+        console.log('_roomId: ' , _roomId, socket.handshake.query.uid);
         sockets.push(socket);
         voiceCall.runLiveConvs(socket, sockets, io);
           socket.on('disconnect', () => {
@@ -29,20 +32,25 @@ io.on('connection', (socket) => {
               socket.leave(room);
             }
           });
-        
-          socket.on('join', (name, callback) => {
-            var socketIds = socketIdsInRoom(name);
+          
+          socket.on('join', (roomId, callback) => {
+            var socketIds = socketIdsInRoom(roomId);
             callback(socketIds);
-            socket.join(name);
-            socket.room = name;
+            socket.join(roomId);
+            socket.room = roomId;
+            console.log('roomId' , roomId);
           });
-        
+          
+          socket.on('IsLiveServerUp', (callback) => {
+            callback('LiveServerIsUp');
+          });
+          
           socket.on('exchange', (data) => {
             data.from = socket.id;
             var to = io.sockets.connected[data.to];
             to.emit('exchange', data);
           });
-  
+      
         socket.on('disconnect', () => {
             try {
                 connections--;
@@ -52,7 +60,33 @@ io.on('connection', (socket) => {
             }
         });
         
+        socket.on('getPermissionToTalk_clientAsk', (convId)=>{
+            try {
+                console.log('getPermissionToTalk_clientAsk', convId);
+                roomId = convId + "Call";
+                io.to(roomId).emit('getPermissionToTalk_serverAsk', socket.handshake.query.uid);
+            } catch (e) {
+                 errorHandler.WriteError('getPermissionToTalk_clientAsk', e);
+            }
+           
+        });
         
+        socket.on('getPermissionToTalk_clientAnswer', (isOk, uidAsked) => {
+            try {
+                console.log('getPermissionToTalk_clientAnswer', roomId);
+                io.to(roomId).emit('getPermissionToTalk_serverAnswer', (isOk == true), uidAsked);
+            } catch (e) {
+                errorHandler.WriteError('getPermissionToTalk_clientAnswer', e);
+            }
+        });
+        
+        socket.on('releaseLine', () => {
+          try {
+            io.to(roomId).emit('lineIsFree');
+          } catch (e) {
+            errorHandler.WriteError('getPermissionToTalk_clientAnswer', e);
+          }
+        });
         
     } catch (e) {
         errorHandler.WriteError('Live Chat => connection', e);

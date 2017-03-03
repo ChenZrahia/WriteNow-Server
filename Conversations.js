@@ -20,7 +20,8 @@ this.runConversations = function (socket, sockets, logger) {
                             result[0].participates = result[0].participates.map((user) => {
                                 return {
                                     id: user.id,
-                                    phoneNumber: user.phoneNumber
+                                    phoneNumber: user.phoneNumber,
+                                    publicKey: user.pkey
                                 };
                             });
                             var res = result[0];
@@ -38,8 +39,8 @@ this.runConversations = function (socket, sockets, logger) {
                             function saveNewConv(newConv, newUsr){
                                 newConv.saveAll({ participates: true }).then(function (result) {
                                     result.participates = result.participates.map((usr) => {
-                                        console.log(usr);
-                                        console.log('usr.id');
+                                        //console.log(usr);
+                                        //console.log('usr.id');
                                         return {id: usr};
                                     });
                                     if (newUsr) {
@@ -48,8 +49,8 @@ this.runConversations = function (socket, sockets, logger) {
                                             phoneNumber: newUsr.phoneNumber
                                         };
                                     }
-                                    console.log(result);
-                                    console.log('result');
+                                    //console.log(result);
+                                    //console.log('result');
                                     socket.emit('returnConv', result);
                                 }).error(function (err) {
                                     errorHandler.WriteError('GetConvByContact => newConv.saveAll', err);
@@ -246,6 +247,7 @@ this.runConversations = function (socket, sockets, logger) {
         
         function GetAllUserConvChanges(convIdArray, callback) {
             try {
+                console.log('GetAllUserConvChanges');
                 schema.Conversation.getJoin({ participates: true, messages: true }).filter(function (con) {
                     try {
                         return con("participates")("id").contains(socket.handshake.query.uid);
@@ -262,13 +264,11 @@ this.runConversations = function (socket, sockets, logger) {
                                         errorHandler.WriteError('on GetUserAllOpenConv => merge => filter', e);
                                     }
                                 }),
-                                messages: conv("messages").orderBy(schema.r.desc('sendTime')).pluck('content', 'from', 'sendTime').limit(1),
+                                messages: conv("messages").orderBy(schema.r.desc('sendTime')).pluck('content', 'from', 'sendTime', 'isEncrypted').limit(1),
                                 notifications: conv("messages").filter(function(msg)
                                 {
                                     return ((msg.hasFields("seen").not())
-                                            .or(msg.hasFields("seen").and((msg("seen").contains(function(usr){
-                                                return usr("uid").ne(socket.handshake.query.uid);
-                                            }))))).and(msg("from").ne(socket.handshake.query.uid))
+                                            .or(msg.hasFields("seen").and((msg("seen").contains(socket.handshake.query.uid))))).and(msg("from").ne(socket.handshake.query.uid))
                                 }).count()
                             };
                     } catch (e) {
@@ -289,6 +289,7 @@ this.runConversations = function (socket, sockets, logger) {
                                 if(conv.messages.length > 0){
                                     conv.lastMessage = conv.messages[0].content;
                                     conv.lastMessageTime = conv.messages[0].sendTime;
+                                    conv.lastMessageEncrypted = conv.messages[0].isEncrypted;
                                 }
                                 if (indexOfConv >= 0) {
                                     convIdArray.splice(indexOfConv,1);
@@ -302,13 +303,10 @@ this.runConversations = function (socket, sockets, logger) {
                             }
                             return false;
                         });
-                        console.log('check if');
                         if (callback) {
                             convIdArray.map((convToDelete) => {
                                 result.push({id: convToDelete, deletedConv: true});
                             });
-                            console.log('GetAllUserConvChanges result: ');
-                            console.log(result);
                             callback(result);
                         }
                         else{

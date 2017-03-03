@@ -11,32 +11,39 @@ this.runLiveConvs = (function(clsObj) { return function(socket, sockets, io){
     try {
         console.log(socket.handshake.query.uid + " Trying To Connect To The Server...");
         
-        socket.on('makeCall', function(callback, convId) {
+        socket.on('makeCall', function(callback, convId, _callType) {
             try {
-                //לא למחוק!!
-                // var newChat = new schema.LiveChat({
-                //     callDateTime: moment().format(),
-                //     callerId: socket.handshake.query.uid,
-                //     receiverId: receiverId
-                //  });
-                //  newChat.save((error, doc) => {
-                //         if (doc && callback) {
-                //             callback(doc);
-                //             return;
-                //         }
-                //         else {
-                //             errorHandler.WriteError('runLiveConvs => makeCall.save' , '(doc && callback) = false');
-                //             if (callback) {
-                //                 callback('error');
-                //                 return;
-                //             }
-                //         }
-                //         if (error) {
-                //             errorHandler.WriteError('runLiveConvs => makeCall.save', error);
-                //         }
-                //     }).error(function (err){
-                //     errorHandler.WriteError('runLiveConvs => newUser.save => error', err);
-                // });
+                var callTypeNumber = 3;
+                if (_callType == "voice") {
+                   callTypeNumber = 1;
+                } else if (_callType == "video") {
+                   callTypeNumber = 2;
+                }
+                
+                var newChat = new schema.LiveChat({
+                    callDateTime: moment().format(),
+                    callType: callTypeNumber,
+                    callerId: socket.handshake.query.uid,
+                    receiverId: convId
+                 });
+                 newChat.save((error, doc) => {
+                        /*if (doc && callback) {
+                            callback(doc);
+                            return;
+                        }
+                        else {
+                            errorHandler.WriteError('runLiveConvs => makeCall.save' , '(doc && callback) = false');
+                            if (callback) {
+                                callback('error');
+                                return;
+                            }
+                        }
+                        if (error) {
+                            errorHandler.WriteError('runLiveConvs => makeCall.save', error);
+                        }*/
+                    }).error(function (err){
+                    errorHandler.WriteError('runLiveConvs => makeCall.save => error', err);
+                });
                 
                 
                 //-------
@@ -67,7 +74,8 @@ this.runLiveConvs = (function(clsObj) { return function(socket, sockets, io){
                                                 tokens: _tokens,
                                                 from: FromName,
                                                 picture: FromPicture,
-                                                convId: convId
+                                                convId: convId,
+                                                callType: _callType
                                             });
                                         }
                                     } catch (e) {
@@ -102,6 +110,14 @@ this.runLiveConvs = (function(clsObj) { return function(socket, sockets, io){
                 // });
             } catch (e) {
                 errorHandler.WriteError('on makeCall', e);
+            }
+        });
+        
+        socket.on('getAllCalls', (callback) => {
+            try {
+                
+            } catch (e) {
+                 errorHandler.WriteError('getAllCalls', e);
             }
         });
         

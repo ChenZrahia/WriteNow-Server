@@ -2,6 +2,7 @@ var errorHandler = require('./ErrorHandler.js');
 var schema = require('./schema.js');
 var users = require('./Users.js');
 var chat = require('./Chat.js');
+var monitor = require('./monitor.js');
 var UserPublic = require('./UserPublic.js');
 var cnversation = require('./Conversations.js');
 var group = require('./Groups.js');
@@ -9,17 +10,17 @@ var express = require('express');
 var app = express();
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
-var NodeRSA = require('node-rsa');
+var RSAKey = require('react-native-rsa');
 
-var secureMode = false;
+
+var secureMode = true;
 
 server.listen(8080);
 
 //app.use('/logs',express.static(__dirname + '/all-logs.log'));
 
-var connections = 0;
+this.connections = 0;
 var sockets = [];
-var monitorsSockets = [];
 
 // try {
 // console.log('start on');
@@ -35,51 +36,24 @@ var monitorsSockets = [];
 //     console.log(e);
 // }
 
-io.on('connection', function (socket) {
+io.on('connection', (socket) => {
     try {
-        //אימות
-        this.broadCastToMonitor = function (event, value) {
-            for (var i = 0; i < monitorsSockets.length; i++) {
-                monitorsSockets[i].emit(event, value);
-            }
-            socket.emit(event, value);
-        };
+        errorHandler.runErrorHandler(socket, this.updateClientErrors, this.updateServerErrors);
         
-        connections++;
-        console.log('New connection! ' + connections);
-        errorHandler.runErrorHandler(socket);
+        this.connections++;
+        console.log('New connection! ' + this.connections); 
+        
+        //אימות
+        monitor.runMonitor(socket, sockets); //אימות למוניטור
+        
+      
         UserPublic.runUserPublic(socket);
 
-        if (secureMode === true) {
-            if (socket.handshake.query.encryptedUid && socket.handshake.query.publicKey) {
-                var uid = decrypteUid(socket.handshake.query.encryptedUid, socket.handshake.query.publicKey);
-                socket.handshake.query.uid = uid;
-                if (true) {
-                    schema.User.filter({ id: uid }).execute().then(function (user_result) {
-                        try {
-                            if (user_result.length > 0) {
-                                console.log('Successfully validated! uid:', user_result[0].id);
-                                socket.emit('AuthenticationOk', 'OK');
-                                runAll(socket);
-                                changeOnlineStatus(user_result[0].id, true);
-                                updateToken(user_result[0].id, socket.handshake.query.token);
-                            } else {
-                                socket.emit('AuthenticationFailed');
-                                errorHandler.WriteError('connection => schema.User.filter', {message: 'AuthenticationFailed'});
-                                return;
-                            }
-                        } catch (e) {
-                            errorHandler.WriteError('connection => schema.User.filter catch', e);
-                        }
-                    }).error(function (err){
-                        errorHandler.WriteError('connection => schema.User.filter => error', err);
-                    });
-                }
-            }
-        } else {
-             if (socket.handshake.query.uid) {
-                var uid = socket.handshake.query.uid;
-                schema.User.filter({ id: uid }).execute().then(function (user_result) {
+        if (socket.handshake.query.encryptedUid && socket.handshake.query.publicKey) {
+            var uid = decrypteUid(socket.handshake.query.encryptedUid, socket.handshake.query.publicKey);
+            socket.handshake.query.uid = uid;
+            if (uid) {
+                schema.User.filter({ id: uid, pkey: socket.handshake.query.publicKey}).execute().then(function (user_result) {
                     try {
                         if (user_result.length > 0) {
                             console.log('Successfully validated! uid:', user_result[0].id);
@@ -98,73 +72,30 @@ io.on('connection', function (socket) {
                 }).error(function (err){
                     errorHandler.WriteError('connection => schema.User.filter => error', err);
                 });
+            } else {
+                socket.emit('AuthenticationFailed');
+                errorHandler.WriteError('connection => schema.User.filter => else', {message: 'AuthenticationFailed'});
+                return;
             }
         }
-        
-        this.broadCastToMonitor('connectionsChanged', connections);
-        this.updateErrors = function(){
-            schema.Error.filter({isClient: true}).orderBy(schema.r.desc('timestamp')).run().then((clientErrors) => {
-                socket.emit('clientErrors', clientErrors);
-            }).error(function (err){
-                errorHandler.WriteError('Error => clientErrors', err);
-            });
-            
-            schema.Error.filter({isClient: false}).orderBy(schema.r.desc('timestamp')).run().then((serverErrors) => {
-                socket.emit('serverErrors', serverErrors);
-            }).error(function (err){
-                errorHandler.WriteError('Error => serverErrors', err);
-            });
-        }
-        //להוסיף אבטחה. לאמת מוניטור
-        socket.on('monotorOn', () => {
-            try {
-                socket.emit('connectionsChanged', connections);
-                
-                schema.r.table('User').count().run().then((count) => {
-                    socket.emit('registredUsers', count);
-                }).error(function (err){
-                    errorHandler.WriteError('monotorOn => User', err);
-                });
-                
-                schema.r.table('Message').count().run().then((count) => {
-                    socket.emit('MessagesCount', count);
-                }).error(function (err){
-                    errorHandler.WriteError('monotorOn => Message', err);
-                });
-                
-                schema.r.table('Conversation').count().run().then((count) => {
-                    socket.emit('TotalChats', count);
-                }).error(function (err){
-                    errorHandler.WriteError('monotorOn => TotalChats', err);
-                });
-                
-                this.updateErrors();
-            } catch (e) {
-                errorHandler.WriteError('monotorOn', e);
-            }
-        });
-        
-        schema.Error.changes().run().then((change) => {
-            console.log(0);
-            this.updateErrors();
-        });
-        
 
+        monitor.broadCastToMonitor('connectionsChanged', this.connections);
+        
         socket.on('disconnect', () => {
             try {
-                connections--;
-                console.log('disconnected - ' + connections);
+                this.connections--;
+                console.log('disconnected - ' + this.connections);
                 sockets.splice(sockets.indexOf(socket), 1);
-                if (monitorsSockets.indexOf(socket) >= 0) {
-                    monitorsSockets.splice(monitorsSockets.indexOf(socket), 1);
+                if (monitor.monitorsSockets.indexOf(socket) >= 0) {
+                    monitor.monitorsSockets.splice(monitor.monitorsSockets.indexOf(socket), 1);
                 }
-                this.broadCastToMonitor('connectionsChanged', connections);
+                monitor.broadCastToMonitor('connectionsChanged', this.connections);
             } catch (e) {
                 errorHandler.WriteError('disconnect', e);
             }
         });
         
-        monitorsSockets.push(socket); //if socket of monitor
+        monitor.monitorsSockets.push(socket); //if socket of monitor
         
     } catch (e) {
         errorHandler.WriteError('connection', e);
@@ -197,10 +128,12 @@ var updateToken = function (uid, token) {
 
 var decrypteUid = function (encryptedUid, publicKey) {
     try {
-        var importedKey = new NodeRSA();
-        importedKey.importKey(publicKey, 'public');
-        var decrypted_uid = importedKey.decryptPublic(encryptedUid, 'utf8');
-        return decrypted_uid;
+        
+        var rsa = new RSAKey();
+        rsa.setPublicString(publicKey);
+        var decrypted_uid = rsa.decryptWithPublic(encryptedUid); 
+        console.log("decrypted:" +decrypted_uid);
+         return decrypted_uid;
     } catch (e) {
         errorHandler.WriteError('decrypteUid', e);
     }

@@ -3,7 +3,6 @@ var errorHandler = require('./ErrorHandler.js');
 this.r = thinky.r;
 
 try {
-
     var type = thinky.type;
 
     this.User = thinky.createModel('User', {
@@ -46,6 +45,7 @@ try {
         sendTime: type.date(),
         lastTypingTime: type.date(),
         seen: [{ uid: type.string(), when: type.date() }], //array of all users that read the messages
+        isDeleted: type.boolean()
     });
 
     this.friendsOnline = thinky.createModel('friendsOnline', {
@@ -58,6 +58,7 @@ try {
     
     this.LiveChat = thinky.createModel('LiveChat', {
         id: type.string(),
+        callType: type.number(), //1-voice , 2-video , 3-ptt
         callDateTime: type.date(),
         callerId: type.string(),
         receiverId: type.string(),

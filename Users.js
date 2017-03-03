@@ -3,6 +3,7 @@ var errorHandler = require('./ErrorHandler.js');
 
 this.isUserExist = function (uid, callback) {
     try {
+       
         if (!uid) {
             callback(false);
             return;

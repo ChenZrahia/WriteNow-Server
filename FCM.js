@@ -23,6 +23,7 @@ this.gcm = new GCM("AIzaSyBmWNAm2l1BZBaZAqdPZJsgc20praN7UJk");
 
 this.sendNotification = ((data) => {
     try {
+      console.log(data);
         var msg = {
           registration_ids: data.tokens, 
           collapse_key: "writeNow", 
@@ -38,7 +39,8 @@ this.sendNotification = ((data) => {
             playSound: true,
             vibrate: true,
             "convId": data.convId,
-            message_time: moment().format()
+            message_time: moment().format(),
+            isEncrypted: data.isEncrypted
           }
         };
         this.gcm.send(msg, (err, response) => {
@@ -65,10 +67,21 @@ this.sendCall = ((data) => {
             "ticker": "My Notification Ticker",
             "click_action": "fcm.ACTION.HELLO",
             "userName": data.from,
-            "convId": data.convId,
-            "isVoiceCall": true
+            "convId": data.convId
           }
         };
+        
+        if (data.callType == "voice") {
+          msg.data.isVoiceCall = true;
+          console.log('isVoiceCall');
+        } else if (data.callType == "video") {
+           console.log('isVideoCall');
+          msg.data.isVideoCall = true;
+        } else {
+           console.log('isPttCall');
+          msg.data.isPttCall = true;
+        }
+        console.log(msg.data, data.callType);
         
         var msg2 = {
           registration_ids: data.tokens, 
@@ -83,20 +96,17 @@ this.sendCall = ((data) => {
             "click_action": "fcm.ACTION.HELLO",
             "convId": data.convId,
             "isVoiceCall": true
-          },
-          data: {
-            "userName": data.from,
-            "convId": data.convId,
-            "isVoiceCall": true
           }
         };
+        
+        // this.gcm.send(msg2, (err, response) => { //notification Show
+        //   console.log(response);
+        // });
         
         this.gcm.send(msg, (err, response) => {
           console.log(response);
         });
-        this.gcm.send(msg2, (err, response) => {
-          console.log(response);
-        });
+        
     } catch (e) {
         errorHandler.WriteError('sendCall', e);
     }

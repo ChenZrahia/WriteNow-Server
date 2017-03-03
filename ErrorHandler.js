@@ -1,5 +1,6 @@
 var schema = require('./schema.js');
 var logger = require('winston');
+
 logger.add(logger.transports.File, {
     filename: 'all-logs.log',
     handleExceptions: true,
@@ -7,6 +8,7 @@ logger.add(logger.transports.File, {
 });
 
 var _socket;
+var _updateServerError;
 
 this.WriteError = function (stackTrace, e) {
     try {
@@ -26,15 +28,17 @@ this.WriteError = function (stackTrace, e) {
         if (logger) {
             logger.error({ stackTrace: stackTrace, message: msg, isClient: false, userId: uid });
         }
+        _updateServerError();
     } catch (e) {
         console.log(e);
     }
 };
 
-this.runErrorHandler = function (socket) {
+this.runErrorHandler = function (socket, updateClientError, updateServerError) {
     try {
         _socket = socket;
-        socket.on('WriteError', function (message, stackTrace) {
+        _updateServerError = updateServerError;
+        socket.on('WriteError', (message, stackTrace) => {
             var errObj = new schema.Error({ stackTrace: stackTrace,
                                 message: message,
                                 isClient: true,
@@ -45,6 +49,7 @@ this.runErrorHandler = function (socket) {
             });
             console.log(message, stackTrace);
             logger.error({ stackTrace: stackTrace, message: message, isClient: true, userId: socket.handshake.query.uid });
+            updateClientError();
         });
 
         socket.on('WriteLog', function (message) {
