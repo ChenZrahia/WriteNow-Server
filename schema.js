@@ -15,8 +15,9 @@ try {
         ModifyDate: type.date(),
         ModifyPicDate: type.date(),
         isTempUser: type.boolean(),
+        socketId: type.string(),
         publicInfo: {
-            fullName: type.string(),
+            e: type.string(),
             picture: type.string()
         },
         privateInfo: {
@@ -86,6 +87,9 @@ try {
 
     this.User.hasAndBelongsToMany(this.User, "friends", "id", "id", {  type: 'friends' });
     this.User.hasAndBelongsToMany(this.User, "friends_followers", "id", "id", {  type: 'friends_followers' });
+    
+    this.LiveChat.hasOne(this.Conversation, "Conversation", "receiverId", "id");
+    this.Conversation.hasMany(this.LiveChat, "LiveChat", "id", "receiverId");
     
     this.User.defineStatic('follow', function(targetUser, uid, Fuid) {
       return Promise.all([

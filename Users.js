@@ -33,13 +33,11 @@ this.isUserExist = function (uid, callback) {
 this.runUser = function (socket, sockets) {
     try {
         socket.on('getUsers', function (users, callback) {
-            console.log(users);console.log('users');
             try {
                 if (callback) {
                     schema.User.filter((usr) => {
                         return schema.r.expr(users).contains(usr("id"));
                     }).run().then((result) => {
-                        console.log(result);
                         callback(result);
                     });
                 }
@@ -125,13 +123,11 @@ this.runUser = function (socket, sockets) {
             }
         });
         
-        socket.on('GetMyFriendsChanges', function (usersToServer, callback) {
+        socket.on('GetMyFriendsChanges', (usersToServer, callback) => {
             try {
-                console.log('usersToServer');
-                console.log(usersToServer);
-                console.log('usersToServer');
                 var friendUidArray = usersToServer.friendUidArray;
                 var phonesArray = usersToServer.phonesArray.filter((num) => {return num != null});
+                
                 schema.User.filter((usr) => {
                     try {
                         return (schema.r.expr(phonesArray).contains(usr("phoneNumber"))).and(schema.r.expr(friendUidArray).contains(usr("id")).not());
@@ -140,8 +136,6 @@ this.runUser = function (socket, sockets) {
                     }
                 }).run().then(function (myFriends) {
                     try {
-                        console.log(myFriends);
-                        console.log('myFriends');
                         if (callback) {
                             callback(myFriends);
                         }
@@ -155,7 +149,7 @@ this.runUser = function (socket, sockets) {
                 errorHandler.WriteError('GetMyFriendsChanges', e);
             }
         });
-
+        
         socket.on('GetUserByUid', function (uid, callback) {
             try {
                 schema.User.get(uid).run().then(function (result) {

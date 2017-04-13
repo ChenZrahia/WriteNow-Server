@@ -38,7 +38,55 @@ this.runGroup = function(socket, sockets) {
             }
         });
 
-
+        
+        socket.on('getConvParticipates', (newUsers, callback) => {
+            try {
+                schema.User.filter((usr) => {
+                    try {
+                        return (schema.r.expr(newUsers).contains(usr("id")));
+                    } catch (e) {
+                        errorHandler.WriteError('getConvParticipates => schema.User.filter', e);
+                    }
+                }).run().then(function (myFriends) {
+                    try {
+                        console.log(myFriends);
+                        console.log('getConvParticipates');
+                        if (callback) {
+                            callback(myFriends);
+                        }
+                    } catch (e) {
+                        errorHandler.WriteError('getConvParticipates => schema.User.get', e);
+                    }
+                }).error(function (err){
+                    errorHandler.WriteError('getConvParticipates => schema.User.get => error', err);
+                });
+            } catch (e) {
+                errorHandler.WriteError('getConvParticipates', e);
+            }
+        });
+        
+        socket.on('getGroupParticipatesId', (convId, callback) => {
+            try {
+                console.log('getGroupParticipatesId', convId);
+                schema.Conversation.getJoin({ participates: true }).filter({id: convId}).pluck({participates: {id: true}})
+                .run()
+                .then((result) => {
+                    console.log(result);
+                    console.log(result[0]);
+                    console.log(result.length);
+                    if (result.length > 0) {
+                        var idsArr = result[0].participates.map((x) => {
+                            return x.id;
+                        });
+                        console.log(idsArr);
+                        callback(idsArr);
+                    }
+                });
+            } catch (e) {
+                errorHandler.WriteError('getConvParticipates', e);
+            }
+        });
+        
         socket.on('updateGroupInfo', function(group, callback) {
             try {
                 if (!group.groupName || group.groupName.length == 0 || !group.convId) {
@@ -50,7 +98,6 @@ this.runGroup = function(socket, sockets) {
                     }
                 }
                 else {
-                    console.log(group.groupName);
                     schema.Conversation.get(group.convId).update({
                         groupName: group.groupName,
                         groupPicture: group.groupPicture
@@ -73,7 +120,6 @@ this.runGroup = function(socket, sockets) {
 
         socket.on('updateGroupParticipants', function(_convId, _participates, callback) {
             try {
-                console.log('updateGroup1');
                 if (!_participates || _participates.length < 2) {
                     errorHandler.WriteError('updateGroupParticipants => validate', {
                         message: '_participates.length < 2'
@@ -84,11 +130,9 @@ this.runGroup = function(socket, sockets) {
                 }
                 else {
                     schema.r.table("Conversation_User").filter({Conversation_id: _convId}).pluck('User_id').run().then((participates) => {
-                        console.log('participates.length ' ,participates.length);
                         for (var i = 0; i < _participates.length; i++) {
                             var res = participates.filter(x => {return x.User_id == _participates[i]});
                             if (res.length == 0) {
-                                console.log('true ' , i, _participates[i]);
                                 schema.r.table("Conversation_User").insert({
                                     Conversation_id: _convId,
                                     User_id: _participates[i]
@@ -97,19 +141,17 @@ this.runGroup = function(socket, sockets) {
                         }
                         for (var i = 0; i < participates.length; i++) {
                             if (_participates.indexOf(participates[i].User_id) < 0) {
-                                console.log('true ' , i, _convId, participates[i].User_id);
                                 schema.r.table("Conversation_User").filter({Conversation_id: _convId, User_id: participates[i].User_id}).delete().run();
                             }
                         }
+                        callback(true);
                     });
                 }
-                console.log('updateGroup2');
             }
             catch (e) {
                 errorHandler.WriteError('updateGroupParticipants', e);
             }
         });
-
     }
     catch (e) {
         errorHandler.WriteError('runGroup', e);

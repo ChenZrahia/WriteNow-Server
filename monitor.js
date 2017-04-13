@@ -4,31 +4,14 @@ var server = require('./server.js');
 
 var monitorsSockets = [];
 this.monitorsSockets = monitorsSockets;
-this.runMonitor = function (socket, sockets) {
+this.runMonitor = (socket, sockets) => {
     try {
-      
       this.broadCastToMonitor = function (event, value) {
             for (var i = 0; i < monitorsSockets.length; i++) {
                 monitorsSockets[i].emit(event, value);
             }
             socket.emit(event, value);
         };
-        
-        this.updateServerErrors = () => {
-             schema.Error.filter({isClient: false}).orderBy(schema.r.desc('timestamp')).run().then((serverErrors) => {
-                this.broadCastToMonitor('serverErrors', serverErrors);
-            }).error(function (err){
-                errorHandler.WriteError('Error => serverErrors', err);
-            });
-        }
-        
-        this.updateClientErrors = () => {
-             schema.Error.filter({isClient: true}).orderBy(schema.r.desc('timestamp')).run().then((clientErrors) => {
-                this.broadCastToMonitor('clientErrors', clientErrors);
-            }).error(function (err){
-                errorHandler.WriteError('Error => clientErrors', err);
-            });
-        }
         
         //להוסיף אבטחה. לאמת מוניטור
         socket.on('monitorOn', () => {
@@ -53,8 +36,8 @@ this.runMonitor = function (socket, sockets) {
                     errorHandler.WriteError('monitorOn => TotalChats', err);
                 });
                 
-                this.updateClientErrors();
-                this.updateServerErrors();
+                server.updateClientErrors();
+                server.updateServerErrors();
             } catch (e) {
                 errorHandler.WriteError('monitorOn', e);
             }
@@ -66,7 +49,7 @@ this.runMonitor = function (socket, sockets) {
         
         socket.on('GetAllUsers', (callback) => {
             try {
-                schema.r.table('User').run().then((data) => {
+                schema.r.table('User').pluck("ModifyDate","ModifyPicDate","id","isOnline","isTempUser","phoneNumber","publicInfo.fullName","publicInfo.gender","publicInfo.mail","lastSeen","pkey","privateInfo.password","privateInfo.tokenNotification","socketId").run().then((data) => {
                     callback(data);
                 });
             } catch (e) {
@@ -76,7 +59,7 @@ this.runMonitor = function (socket, sockets) {
         
         socket.on('GetAllConversations', (callback) => {
             try {
-                schema.r.table('Conversation').run().then((data) => {
+                schema.r.table('Conversation').pluck("id", "isEncrypted", "isGroup", "manager", "groupName").run().then((data) => {
                     callback(data);
                 });
             } catch (e) {
@@ -86,7 +69,7 @@ this.runMonitor = function (socket, sockets) {
         
         socket.on('GetAllMessages', (callback) => {
             try {
-                schema.r.table('Message').run().then((data) => {
+                schema.r.table('Message').pluck("_id","content","convId","createdAt","from","id","isEncrypted","lastTypingTime","sendTime","text","seen","isDeleted","user._id","user.ModifyDate","user.avatar","user.id","user.name","user.phoneNumber","user.publicInfo.fullName","imgPath","mid").run().then((data) => {
                     callback(data);
                 });
             } catch (e) {

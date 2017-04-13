@@ -26,8 +26,6 @@ this.runConversations = function (socket, sockets, logger) {
                             });
                             var res = result[0];
                             res.newUsr = result[0].participates;
-                            console.log(res);
-                            console.log('res');
                             socket.emit('returnConv', res);
                         }
                         else {
@@ -39,8 +37,6 @@ this.runConversations = function (socket, sockets, logger) {
                             function saveNewConv(newConv, newUsr){
                                 newConv.saveAll({ participates: true }).then(function (result) {
                                     result.participates = result.participates.map((usr) => {
-                                        //console.log(usr);
-                                        //console.log('usr.id');
                                         return {id: usr};
                                     });
                                     if (newUsr) {
@@ -49,8 +45,6 @@ this.runConversations = function (socket, sockets, logger) {
                                             phoneNumber: newUsr.phoneNumber
                                         };
                                     }
-                                    //console.log(result);
-                                    //console.log('result');
                                     socket.emit('returnConv', result);
                                 }).error(function (err) {
                                     errorHandler.WriteError('GetConvByContact => newConv.saveAll', err);
@@ -95,7 +89,7 @@ this.runConversations = function (socket, sockets, logger) {
             }
         };
 
-        socket.on('GetConvById', function (convId) {
+        socket.on('GetConvById', function (convId) { //to delete ????
             try {
                 schema.Conversation.getJoin({ messages: true }).filter({ id: convId }).run().then(function (result) {
                     try {
@@ -113,14 +107,24 @@ this.runConversations = function (socket, sockets, logger) {
         
         socket.on('GetConvChangesById', function (convId, lastMessageTime, callback) {
             try {
-                schema.Conversation.getJoin({ participates: true, messages: true }).filter({ id: convId }).run().then(function (result) {
+                schema.Conversation.getJoin({ participates: true, messages: true }).pluck({
+                    id: true,
+                    isEncrypted: true, 
+                    isGroup: true,
+                    manager: true,
+                    messages: true,
+                    participates: {
+                        id: true,
+                        isOnline: true,
+                        pkey: true
+                    }
+                }).filter({ id: convId }).run().then(function (result) {
                     try {
                         if (lastMessageTime == null) {
                              console.log('lastMessageTime null');
                         } else {
                             lastMessageTime = new Date(lastMessageTime);
                             result[0].messages = result[0].messages.filter((msg) => {
-                                //msg.sendTime = new Date(msg.sendTime); 
                                 if (msg.from == socket.handshake.query.uid) {
                                     return false;
                                 } else if(msg.sendTime > lastMessageTime  && !msg.isDeleted){
@@ -133,14 +137,14 @@ this.runConversations = function (socket, sockets, logger) {
                             });
                         }
                         
-                        result[0].participates = result[0].participates.map((user) => {
-                            return {id: user.id,
-                                    isOnline: user.isOnline,
-                                    pkey: user.pkey
-                                };
-                        console.log('result GetConvChangesById:');
+                        //pluck 13.4.17
+                        // result[0].participates = result[0].participates.map((user) => {
+                        //     return {id: user.id,
+                        //             isOnline: user.isOnline,
+                        //             pkey: user.pkey
+                        //         };
+                        //});
                         console.log(result[0]);
-                        });
                         if (callback) {
                             callback(result[0]);
                         }
@@ -158,7 +162,6 @@ this.runConversations = function (socket, sockets, logger) {
 
         socket.on('GetConvByContact', function (phoneNumber, fullName) {
             try {
-                console.log('GetConvByContact');
                 if (phoneNumber && fullName) {
                     GetConvByContact(phoneNumber, fullName);
                 } else {
@@ -245,9 +248,59 @@ this.runConversations = function (socket, sockets, logger) {
             }
         });
         
-        function GetAllUserConvChanges(convIdArray, callback) {
+        var findNewFriends = function(uidArr, callback) {
             try {
-                console.log('GetAllUserConvChanges');
+                 schema.r.db("WriteNow").table('Conversation_User').filter(function(conv_user) {
+                    return conv_user("User_id").eq(socket.handshake.query.uid);
+                }).then((convs) => {
+                    try {
+                        if (convs) {
+                            convs = convs.map((conv) => {
+                                return conv.Conversation_id;
+                            });
+                            schema.r.db("WriteNow").table('Conversation_User').filter((conv_user) => {
+                                return schema.r.expr(convs).contains(conv_user("Conversation_id")).and(schema.r.expr(uidArr).contains(conv_user("User_id")).not());
+                            }).then(function(users){
+                                users = users.map(x => x.User_id);
+                                schema.User.filter((usr) => {
+                                    return schema.r.expr(users).contains(usr("id"));
+                                }).run().then((result) => {
+                                    callback(result, 'findNewFriends');
+                                });
+                            });
+                        }
+                        else {
+                            errorHandler.WriteError('this.findNewFriends => convs', 'convs is null or undefined');
+                        }
+                    } catch (e) {
+                        errorHandler.WriteError('this.findNewFriends => convs catch', e);
+                    }
+                }).error(function (err){
+                    errorHandler.WriteError('this.findNewFriends => convs => error', err);
+                });
+            } catch (e) {
+                 errorHandler.WriteError('this.findNewFriends', e);
+            }
+        }
+        
+        function GetAllUserConvChanges(uidArr, convIdArray, callback) {
+            try {
+                var countOfResults = 0;
+                var finalResult = {};
+                var InernalCallback = (data, funcName) => {
+                    countOfResults++;
+                    if (funcName == 'findNewFriends') {
+                        finalResult.NewFriends = data;
+                    } else {
+                        finalResult.ConvChanges = data;
+                    }
+                    if (countOfResults >= 2) {
+                        callback(finalResult);
+                    }
+                };
+                
+                findNewFriends(uidArr, InernalCallback);
+                
                 schema.Conversation.getJoin({ participates: true, messages: true }).filter(function (con) {
                     try {
                         return con("participates")("id").contains(socket.handshake.query.uid);
@@ -264,11 +317,11 @@ this.runConversations = function (socket, sockets, logger) {
                                         errorHandler.WriteError('on GetUserAllOpenConv => merge => filter', e);
                                     }
                                 }),
-                                messages: conv("messages").orderBy(schema.r.desc('sendTime')).pluck('content', 'from', 'sendTime', 'isEncrypted').limit(1),
+                                messages: conv("messages").filter((msg) => { return msg("content").ne(''); }).orderBy(schema.r.desc('sendTime')).pluck('content', 'from', 'sendTime', 'isEncrypted').limit(1),
                                 notifications: conv("messages").filter(function(msg)
                                 {
                                     return ((msg.hasFields("seen").not())
-                                            .or(msg.hasFields("seen").and((msg("seen").contains(socket.handshake.query.uid))))).and(msg("from").ne(socket.handshake.query.uid))
+                                            .or(msg.hasFields("seen").and((msg("seen").contains(socket.handshake.query.uid))))).and(msg("from").ne(socket.handshake.query.uid)).and(msg("content").ne(''))
                                 }).count()
                             };
                     } catch (e) {
@@ -282,7 +335,7 @@ this.runConversations = function (socket, sockets, logger) {
                         result = result.filter((conv) => {
                             var indexOfConv = convIdArray.indexOf(conv.id);
                             if(conv.participates.length > 0 || indexOfConv >= 0) {
-                                if(!conv.isGroup){
+                                if(!conv.isGroup && conv.participates && conv.participates[0] && conv.participates[0].publicInfo){
                                     conv.groupName = conv.participates[0].publicInfo.fullName;
                                     conv.groupPicture = conv.participates[0].publicInfo.picture;
                                 }
@@ -303,11 +356,11 @@ this.runConversations = function (socket, sockets, logger) {
                             }
                             return false;
                         });
-                        if (callback) {
+                        if (InernalCallback) {
                             convIdArray.map((convToDelete) => {
                                 result.push({id: convToDelete, deletedConv: true});
                             });
-                            callback(result);
+                            InernalCallback(result, 'changes');
                         }
                         else{
                             console.log('check else');
@@ -379,7 +432,36 @@ this.runConversations = function (socket, sockets, logger) {
                 errorHandler.WriteError('on GetAllConvs', e);
             }
         });
-
+        socket.on('GetLiveChats', (callback) => {
+            try {
+                if (!callback) {
+                    return;
+                }
+                
+                schema.LiveChat.getJoin({"Conversation": {"participates": true}})
+                        .pluck({"Conversation":{"participates": {"id": true, "publicInfo": {"fullName": true}}, "groupName": true}, "receiverId": true, "id": true, "callerId": true, "callType": true, "callDateTime": true, "duration": true})
+                        .filter(function(chat){
+                            return chat("Conversation")("participates").contains(function(user){
+                                return user("id").eq(socket.handshake.query.uid);
+                            }); 
+                        })
+                        .map(function(chat){
+                            if (chat("Conversation").hasFields("groupName").not()) {
+                                return chat.merge({"Conversation": {"groupName": chat("Conversation")("participates").filter(function(user){
+                                    return user("id").ne(socket.handshake.query.uid);
+                                })(0)("publicInfo")("fullName")}});
+                            } else {
+                                return chat;
+                            }
+                        })
+                        .orderBy(schema.r.desc('callDateTime'))
+                        .run().then((data) => {
+                            callback(data);
+                        });
+            } catch (e) {
+                 errorHandler.WriteError('getAllCalls', e);
+            }
+        });
     } catch (e) {
         errorHandler.WriteError('runConversations', e);
     }

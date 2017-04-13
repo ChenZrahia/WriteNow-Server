@@ -12,7 +12,6 @@ var server = require('http').Server(app);
 var io = require('socket.io')(server);
 var RSAKey = require('react-native-rsa');
 
-
 var secureMode = true;
 
 server.listen(8080);
@@ -22,22 +21,26 @@ server.listen(8080);
 this.connections = 0;
 var sockets = [];
 
-// try {
-// console.log('start on');
-
-// var importedKey = new NodeRSA({b: 512});
-// var keyData = `MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAJMymCa4d3Tt3wNXSJsEFr3VL3HESxjjXpJsl/pQG8Wy
-// qQ+hB3exXCZbyMzLya46sWhKlum+A6/E6R4PaH5/KM8CAwEAAQ==`;
-// importedKey.importKey(keyData, 'pkcs8-public');
-
-// var decrypted_uid = importedKey.decryptPublic(`Z4o3IVzvPVpN42jd6GkKmLYBRCW4MwbbPVryrl+Pt3UBN4Aqsvg8QEgJOUmnGK0YKDhnelKodNLQwpjqza+nBQ==`, 'base64', 'utf8');
-// console.log(decrypted_uid);
-// } catch (e) {
-//     console.log(e);
-// }
-
 io.on('connection', (socket) => {
     try {
+        
+        //io.sockets.connected['/#XsFzuXFNTocNE4ToAAAF'].emit('typing', {content: 'sdfsd', text: 'sdf'});
+        this.updateServerErrors = () => {
+             schema.Error.filter({isClient: false}).orderBy(schema.r.desc('timestamp')).run().then((serverErrors) => {
+                monitor.broadCastToMonitor('serverErrors', serverErrors);
+            }).error(function (err){
+                errorHandler.WriteError('Error => serverErrors', err);
+            });
+        }
+        
+        this.updateClientErrors = () => {
+             schema.Error.filter({isClient: true}).orderBy(schema.r.desc('timestamp')).run().then((clientErrors) => {
+                monitor.broadCastToMonitor('clientErrors', clientErrors);
+            }).error(function (err){
+                errorHandler.WriteError('Error => clientErrors', err);
+            });
+        }
+        
         errorHandler.runErrorHandler(socket, this.updateClientErrors, this.updateServerErrors);
         
         this.connections++;
@@ -59,7 +62,7 @@ io.on('connection', (socket) => {
                             console.log('Successfully validated! uid:', user_result[0].id);
                             socket.emit('AuthenticationOk', 'OK');
                             runAll(socket);
-                            changeOnlineStatus(user_result[0].id, true);
+                            changeOnlineStatus(user_result[0].id, true, socket.id);
                             updateToken(user_result[0].id, socket.handshake.query.token);
                         } else {
                             socket.emit('AuthenticationFailed');
@@ -102,9 +105,9 @@ io.on('connection', (socket) => {
     }
 });
 
-var changeOnlineStatus = function (uid, _isOnline) {
+var changeOnlineStatus = function (uid, _isOnline, _socketId) {
     try {
-        schema.User.get(uid).update({ isOnline: _isOnline, lastSeen: Date.now() }).run();
+        schema.User.get(uid).update({ isOnline: _isOnline, lastSeen: Date.now(), socketId:_socketId }).run();
         schema.friendsOnline.filter({ fid: uid }).update({ isOnline: _isOnline, lastSeen: Date.now() }).run();
     } catch (e) {
         errorHandler.WriteError('changeOnlineStatus', e);
@@ -118,8 +121,6 @@ var updateToken = function (uid, token) {
         }
         if (token.length > 120) {
             schema.User.get(uid).update({ privateInfo: {tokenNotification: token}}).run();
-        } else {
-           errorHandler.WriteError('updateToken => ', 'Token length is only ' + token.length + ' charcters. Token: ' + token);
         }
     } catch (e) {
         errorHandler.WriteError('updateToken', e);
@@ -144,6 +145,11 @@ var runAll = function (socket) {
         if (sockets.indexOf(socket) == -1) {
             sockets.push(socket);
         }
+        
+        socket.on('changeOnlineStatus', (status) => {
+            changeOnlineStatus(socket.handshake.query.uid, status, socket.id);
+        });
+        
         chat.runChat(socket, sockets, io);
         cnversation.runConversations(socket, sockets);
         users.runUser(socket, sockets);
@@ -152,7 +158,7 @@ var runAll = function (socket) {
             try {
                 var uid = socket.handshake.query.uid;
                 if (uid) {
-                    changeOnlineStatus(uid, false);
+                    changeOnlineStatus(uid, false, socket.id);
                 }
             } catch (e) {
                 errorHandler.WriteError('disconnect', e);

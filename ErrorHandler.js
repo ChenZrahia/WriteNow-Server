@@ -39,6 +39,8 @@ this.runErrorHandler = function (socket, updateClientError, updateServerError) {
         _socket = socket;
         _updateServerError = updateServerError;
         socket.on('WriteError', (message, stackTrace) => {
+            console.log('message', message);
+            console.log('stackTrace', stackTrace);
             var errObj = new schema.Error({ stackTrace: stackTrace,
                                 message: message,
                                 isClient: true,
@@ -47,7 +49,6 @@ this.runErrorHandler = function (socket, updateClientError, updateServerError) {
             errObj.save().then(function(doc){
                 //console.log(doc);
             });
-            console.log(message, stackTrace);
             logger.error({ stackTrace: stackTrace, message: message, isClient: true, userId: socket.handshake.query.uid });
             updateClientError();
         });

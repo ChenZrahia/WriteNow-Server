@@ -62,7 +62,6 @@ io.on('connection', (socket) => {
         
         socket.on('getPermissionToTalk_clientAsk', (convId)=>{
             try {
-                console.log('getPermissionToTalk_clientAsk', convId);
                 roomId = convId + "Call";
                 io.to(roomId).emit('getPermissionToTalk_serverAsk', socket.handshake.query.uid);
             } catch (e) {
@@ -73,7 +72,6 @@ io.on('connection', (socket) => {
         
         socket.on('getPermissionToTalk_clientAnswer', (isOk, uidAsked) => {
             try {
-                console.log('getPermissionToTalk_clientAnswer', roomId);
                 io.to(roomId).emit('getPermissionToTalk_serverAnswer', (isOk == true), uidAsked);
             } catch (e) {
                 errorHandler.WriteError('getPermissionToTalk_clientAnswer', e);

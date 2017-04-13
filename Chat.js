@@ -1,28 +1,24 @@
 var schema = require('./schema.js');
-var request = require('request');
 var errorHandler = require('./ErrorHandler.js');
-const token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI5Mzc4MDMyYy1mMGFhLTRmZWYtYmNiNS0yYTc1NzFlNDI5ZmUifQ.khFTEtOOq6_SNBGZwH37zUNiPViQhRGt7-DG9XqeFlw";
 var FCM = require('./FCM.js');
 
-var req_json = {
-    "method": "POST",
-    "url": "https://api.ionic.io/push/notifications",
-    json: true,
-    "headers": {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token
-    }
-};
 
 var messages = [];
 this.liveConvs = {};
 
 this.runChat = ((socket, sockets, io) => {
     try {
+        schema.friendsOnline.filter({uid: socket.handshake.query.uid}).changes().run().then((cursor) => {
+            cursor.each((err, usr) => {
+                if (usr) {
+                    socket.emit('onlineStatusChanged', usr);
+                }
+            });
+        });
+        
         socket.on('enterChat', function(convId) {
             try {
                 socket.join(convId);
-                console.log(convId,socket.handshake.query.uid);
                 updateSeenMessages(convId);
                 whosOnlineInConv(convId);
             } catch (e) {
@@ -33,6 +29,12 @@ this.runChat = ((socket, sockets, io) => {
         socket.on('exitChat', function(convId) {
             try {
                 socket.leave(convId);
+                schema.friendsOnline.filter(function (user) {
+                      try {
+                            return user("uid").eq(socket.handshake.query.uid);
+                      } catch (e) {
+                            errorHandler.WriteError('runUser=> schema.friendsOnline.filter', e);
+                      }}).delete().run();
             } catch (e) {
                 errorHandler.WriteError('on exitChat', e);
             }
@@ -40,7 +42,6 @@ this.runChat = ((socket, sockets, io) => {
         
         socket.on('enterChatCall', function(convId) {
             try {
-                console.log('enterChatCall', convId, socket.handshake.query.uid);
                 var roomId = convId + "Call";
                 socket.join(roomId);
             } catch (e) {
@@ -50,7 +51,6 @@ this.runChat = ((socket, sockets, io) => {
         
         socket.on('exitChatCall', function(convId) {
             try {
-                console.log('exitChatCall', convId, socket.handshake.query.uid);
                 var roomId = convId + "Call";
                 socket.leave(roomId);
                 io.to(roomId).emit('exitChatCall_server', convId);
@@ -72,31 +72,35 @@ this.runChat = ((socket, sockets, io) => {
             {
                errorHandler.WriteError('on encryptrdMessage', e);  
             }
-            
         });
         
-               socket.on('deleteMessage' , function(messageId,convId){
+        socket.on('deleteMessageServer' , function(messageId,convId){
             try{
-              
-                console.log(messageId);
-                console.log(convId);
-                schema.Message.get(messageId).update({ isDeleted: true, content: "" }).run();
+                schema.Message.filter({id: messageId, from: socket.handshake.query.uid}).update({ isDeleted: true, content: "", text: "" }).run().then(function(data){
+                    if (data.length > 0) {
+                        schema.Conversation.get(convId).getJoin({participates: true}).pluck({'participates': {"socketId": true}}).execute().then(function(result){
+                            for (var i = 0; i < result.participates.length; i++) {
+                                console.log('trying to delete message to: ', result.participates[i].socketId);
+                                io.to(result.participates[i].socketId).emit('deleteFriendMessage', messageId);
+                            }
+                        });
+                        //io.to(convId).emit('deleteFriendMessage', messageId);
+                    } else {
+                        console.log('Unauthorized trying to delete message');
+                    }
+                });
                 // schema.r.table('Message').update({
-                    
                 // })
-               io.to(convId).emit('deleteFriendMessage', messageId);
             }
             catch(e)
             {
-               errorHandler.WriteError('on deleteMessage', e);  
+               errorHandler.WriteError('on deleteMessageServer', e);  
             }
             
         });
     
         socket.on('typing', function (message) {
             try {
-                //console.log(message);
-                 //console.log(message);
                 message.from = socket.handshake.query.uid;
                 if(!messages[message.mid]){
                     message.startTypingTime = Date.now();
@@ -120,6 +124,7 @@ this.runChat = ((socket, sockets, io) => {
                     message.startTypingTime = messages[message.mid].startTypingTime;
                 }
                 var Message = new schema.Message(message);
+                console.log(message);
                 message.lastTypingTime = message.sendTime;
                 io.to(message.convId).emit('typing', message);
                 Message.save().then(function(doc) {
@@ -141,7 +146,6 @@ this.runChat = ((socket, sockets, io) => {
                             var FromUser = result.participates.filter((user) => { return user.id == message.from });
                             if (FromUser.length == 1 && result.participates) {
                                 var FromName = FromUser[0].publicInfo.fullName;
-                                //console.log(result.participates);
                                 schema.r.expr(result.participates).filter(function(user){
                                     try {
                                         return user("id").ne(socket.handshake.query.uid).and(user.hasFields("privateInfo")).and(user("privateInfo").hasFields("tokenNotification"));
@@ -156,8 +160,6 @@ this.runChat = ((socket, sockets, io) => {
                                     }
                                 }).run().then((_tokens) => {
                                     try {
-                                                 // console.log('data2');
-                                                  //console.log(_tokens.length);
                                         if (_tokens.length > 0) {
                                             FCM.sendNotification({
                                                 tokens: _tokens,
@@ -197,12 +199,10 @@ this.runChat = ((socket, sockets, io) => {
               
               //insert
               schema.Conversation.getJoin({participates: true}).filter({id: convId}).pluck("participates").map(function (participates) {
-            //   .execute().then(function(result){
                 try {
                     
                             return participates("participates").map(function (friend) {
                         try {
-                            //console.log(friend);
                                 return {
               uid: socket.handshake.query.uid,
               fid: friend("id"),
@@ -217,7 +217,6 @@ this.runChat = ((socket, sockets, io) => {
                 }
             }).execute().then(function (result) {
                 try {
-                    //console.log(result[0]);
                     schema.friendsOnline.insert(result[0]).run();
                     
                     

@@ -113,14 +113,6 @@ this.runLiveConvs = (function(clsObj) { return function(socket, sockets, io){
             }
         });
         
-        socket.on('getAllCalls', (callback) => {
-            try {
-                
-            } catch (e) {
-                 errorHandler.WriteError('getAllCalls', e);
-            }
-        });
-        
     } catch (e) {
         errorHandler.WriteError('runLiveConvs', e);
     }
