@@ -23,7 +23,11 @@ this.gcm = new GCM("AIzaSyBmWNAm2l1BZBaZAqdPZJsgc20praN7UJk");
 
 this.sendNotification = ((data) => {
     try {
-      console.log(data);
+      if (data.isEncrypted == true) {
+        data.content = '🔒 Encrypted Message';
+      } else if (!data.content){
+        data.content = 'New Message';
+      }
         var msg = {
           registration_ids: data.tokens, 
           collapse_key: "writeNow", 
@@ -31,20 +35,24 @@ this.sendNotification = ((data) => {
           notification: {
             "title": data.from,
             "body": data.content,
-            "sound": "default"
+            "sound": "default",
+            "badge": 10,
+            "tag": "writenow"
           },
           data: {
             title: data.from,
+            "badge": 10,
             message: data.content,
             playSound: true,
             vibrate: true,
             "convId": data.convId,
             message_time: moment().format(),
-            isEncrypted: data.isEncrypted
+            isEncrypted: data.isEncrypted,
+            "tag": "writenow"
           }
         };
         this.gcm.send(msg, (err, response) => {
-          console.log(response);
+          //console.log(response);
         });
     } catch (e) {
         errorHandler.WriteError('sendNotification', e);
@@ -81,7 +89,6 @@ this.sendCall = ((data) => {
            console.log('isPttCall');
           msg.data.isPttCall = true;
         }
-        console.log(msg.data, data.callType);
         
         var msg2 = {
           registration_ids: data.tokens, 
@@ -99,12 +106,8 @@ this.sendCall = ((data) => {
           }
         };
         
-        // this.gcm.send(msg2, (err, response) => { //notification Show
-        //   console.log(response);
-        // });
-        
         this.gcm.send(msg, (err, response) => {
-          console.log(response);
+          //console.log(response);
         });
         
     } catch (e) {

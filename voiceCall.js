@@ -13,6 +13,7 @@ this.runLiveConvs = (function(clsObj) { return function(socket, sockets, io){
         
         socket.on('makeCall', function(callback, convId, _callType) {
             try {
+                console.log('## makeCall -- ', socket.handshake.query.uid);
                 var callTypeNumber = 3;
                 if (_callType == "voice") {
                    callTypeNumber = 1;
@@ -26,27 +27,10 @@ this.runLiveConvs = (function(clsObj) { return function(socket, sockets, io){
                     callerId: socket.handshake.query.uid,
                     receiverId: convId
                  });
-                 newChat.save((error, doc) => {
-                        /*if (doc && callback) {
-                            callback(doc);
-                            return;
-                        }
-                        else {
-                            errorHandler.WriteError('runLiveConvs => makeCall.save' , '(doc && callback) = false');
-                            if (callback) {
-                                callback('error');
-                                return;
-                            }
-                        }
-                        if (error) {
-                            errorHandler.WriteError('runLiveConvs => makeCall.save', error);
-                        }*/
-                    }).error(function (err){
+                 newChat.save((error, doc) => {}).error(function (err){
                     errorHandler.WriteError('runLiveConvs => makeCall.save => error', err);
                 });
                 
-                
-                //-------
                 schema.Conversation.get(convId).getJoin({participates: true}).pluck('participates').execute()
                 .then(function(result){
                     try {
@@ -91,23 +75,6 @@ this.runLiveConvs = (function(clsObj) { return function(socket, sockets, io){
                     errorHandler.WriteError('makeCall => error (1)', err);
                 });
                 
-                
-                
-                //----
-                
-                // schema.User.get(socket.handshake.query.uid).run().then((sender) => {
-                //     schema.User.get(receiverId).run().then((receiver) => {
-                //         if (receiver && sender && receiver.privateInfo && receiver.privateInfo.tokenNotification && sender.publicInfo) {
-                //             console.log(sender.publicInfo.fullName + ' is calling!');
-                //             FCM.sendCall({
-                //                 tokens: [receiver.privateInfo.tokenNotification],
-                //                 from: sender.publicInfo.fullName
-                //             });
-                //         } else {
-                //             console.log(receiver , sender, 'receiver && sender is False');
-                //         }
-                //     });
-                // });
             } catch (e) {
                 errorHandler.WriteError('on makeCall', e);
             }

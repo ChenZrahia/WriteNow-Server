@@ -144,7 +144,6 @@ this.runConversations = function (socket, sockets, logger) {
                         //             pkey: user.pkey
                         //         };
                         //});
-                        console.log(result[0]);
                         if (callback) {
                             callback(result[0]);
                         }
@@ -285,10 +284,12 @@ this.runConversations = function (socket, sockets, logger) {
         
         function GetAllUserConvChanges(uidArr, convIdArray, callback) {
             try {
+                console.log('GetAllUserConvChanges', uidArr, convIdArray);
                 var countOfResults = 0;
                 var finalResult = {};
                 var InernalCallback = (data, funcName) => {
                     countOfResults++;
+                     console.log('GetAllUserConvChanges - countOfResults: ', countOfResults);
                     if (funcName == 'findNewFriends') {
                         finalResult.NewFriends = data;
                     } else {
@@ -317,11 +318,14 @@ this.runConversations = function (socket, sockets, logger) {
                                         errorHandler.WriteError('on GetUserAllOpenConv => merge => filter', e);
                                     }
                                 }),
-                                messages: conv("messages").filter((msg) => { return msg("content").ne(''); }).orderBy(schema.r.desc('sendTime')).pluck('content', 'from', 'sendTime', 'isEncrypted').limit(1),
+                                messages: conv("messages").filter((msg) => { return msg("content").ne('').or(msg.hasFields("image")); })
+                                    .orderBy(schema.r.desc('sendTime'))
+                                    .pluck('content', 'from','image', 'sendTime', 'isEncrypted')
+                                    .limit(1),
                                 notifications: conv("messages").filter(function(msg)
                                 {
                                     return ((msg.hasFields("seen").not())
-                                            .or(msg.hasFields("seen").and((msg("seen").contains(socket.handshake.query.uid))))).and(msg("from").ne(socket.handshake.query.uid)).and(msg("content").ne(''))
+                                            .or(msg.hasFields("seen").and((msg("seen").contains(socket.handshake.query.uid))))).and(msg("from").ne(socket.handshake.query.uid)).and(msg("content").ne('').or(msg.hasFields("image")))
                                 }).count()
                             };
                     } catch (e) {
@@ -340,6 +344,11 @@ this.runConversations = function (socket, sockets, logger) {
                                     conv.groupPicture = conv.participates[0].publicInfo.picture;
                                 }
                                 if(conv.messages.length > 0){
+                                    if (conv.messages[0].image && conv.messages[0].content == '') {
+                                        conv.messages[0].content = ' 📷 Image';
+                                    } else if (conv.messages[0].image) {
+                                        conv.messages[0].content = ' 📷 ' + conv.messages[0].content;
+                                    }
                                     conv.lastMessage = conv.messages[0].content;
                                     conv.lastMessageTime = conv.messages[0].sendTime;
                                     conv.lastMessageEncrypted = conv.messages[0].isEncrypted;

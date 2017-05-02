@@ -91,12 +91,6 @@ io.on('connection', (socket) => {
     }
 });
 
-// app.get('/', function(req, res){
-//   console.log('get /');
-//   res.sendFile(__dirname + '/monitor');
-// });
-
-
 function socketIdsInRoom(name) {
   var socketIds = io.nsps['/'].adapter.rooms[name];
   if (socketIds) {

@@ -49,7 +49,27 @@ this.runMonitor = (socket, sockets) => {
         
         socket.on('GetAllUsers', (callback) => {
             try {
-                schema.r.table('User').pluck("ModifyDate","ModifyPicDate","id","isOnline","isTempUser","phoneNumber","publicInfo.fullName","publicInfo.gender","publicInfo.mail","lastSeen","pkey","privateInfo.password","privateInfo.tokenNotification","socketId").run().then((data) => {
+                schema.r.table('User').pluck(
+                    {
+                    id: true,
+                    ModifyDate: true,
+                    ModifyPicDate: true, 
+                    isOnline: true,
+                    isTempUser: true,
+                    phoneNumber: true,
+                    lastSeen: true,
+                    pkey: true,
+                    publicInfo: {
+                        fullName: true,
+                        gender: true,
+                        mail: true
+                    },
+                    privateInfo:{
+                        password: true,
+                        tokenNotification: true
+                    },
+                    socketId: true
+                    }).run().then((data) => {
                     callback(data);
                 });
             } catch (e) {
@@ -59,7 +79,14 @@ this.runMonitor = (socket, sockets) => {
         
         socket.on('GetAllConversations', (callback) => {
             try {
-                schema.r.table('Conversation').pluck("id", "isEncrypted", "isGroup", "manager", "groupName").run().then((data) => {
+                schema.r.table('Conversation').pluck(
+                    {
+                       id: true,
+                       isEncrypted: true,
+                       isGroup: true,
+                       manager: true,
+                       groupName: true
+                    }).run().then((data) => {
                     callback(data);
                 });
             } catch (e) {
@@ -69,7 +96,33 @@ this.runMonitor = (socket, sockets) => {
         
         socket.on('GetAllMessages', (callback) => {
             try {
-                schema.r.table('Message').pluck("_id","content","convId","createdAt","from","id","isEncrypted","lastTypingTime","sendTime","text","seen","isDeleted","user._id","user.ModifyDate","user.avatar","user.id","user.name","user.phoneNumber","user.publicInfo.fullName","imgPath","mid").run().then((data) => {
+                schema.r.table('Message').pluck(
+                    {
+                     _id: true,
+                     content: true,
+                     convId: true,
+                     createdAt: true,
+                     from: true,
+                     id: true,
+                     isEncrypted: true,
+                     lastTypingTime: true,
+                     sendTime: true,
+                     text: true,
+                     seen: true,
+                     isDeleted: true,
+                     user:{
+                         _id: true,
+                         ModifyDate: true,
+                         avatar: true,
+                         id: true,
+                         name: true,
+                         phoneNumber: true,
+                         publicInfo:{
+                             fullName: true
+                         }
+                     },
+                     imgPath: true,
+                     mid: true}).run().then((data) => {
                     callback(data);
                 });
             } catch (e) {
@@ -106,6 +159,27 @@ this.runMonitor = (socket, sockets) => {
                 errorHandler.WriteError('GetAllErrors', e);
             }
         });
+        
+        socket.on('GetAllClientErrors', (callback) => {
+            try {
+                schema.r.table('Error').filter({isClient: true}).orderBy(schema.r.desc('timestamp')).run().then((data) => {
+                    callback(data);
+                });
+            } catch (e) {
+                errorHandler.WriteError('GetAllErrors', e);
+            }
+        });
+        socket.on('GetAllServerErrors', (callback) => {
+            try {
+                schema.r.table('Error').filter({isClient: false}).orderBy(schema.r.desc('timestamp')).run().then((data) => {
+                    callback(data);
+                });
+            } catch (e) {
+                errorHandler.WriteError('GetAllErrors', e);
+            }
+        });
+        
+        
       
     } catch (e) {
         errorHandler.WriteError('runMonitor', e);

@@ -1,5 +1,5 @@
 agGrid.initialiseAgGridWithAngular1(angular);
-var myApp = angular.module('app', ['ui.bootstrap','angular.ping', 'ngRoute', 'agGrid']);
+var myApp = angular.module('app', ['ui.bootstrap','angular.ping', 'agGrid']);
 //var r = require("rethinkdb");
 var socket = io.connect();
 var socketLive = io.connect('https://server-sagi-uziel.c9users.io:8081');

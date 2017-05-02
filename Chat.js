@@ -10,7 +10,7 @@ this.runChat = ((socket, sockets, io) => {
     try {
         schema.friendsOnline.filter({uid: socket.handshake.query.uid}).changes().run().then((cursor) => {
             cursor.each((err, usr) => {
-                if (usr) {
+                if (usr && usr.fid != socket.handshake.query.uid) {
                     socket.emit('onlineStatusChanged', usr);
                 }
             });
@@ -161,6 +161,11 @@ this.runChat = ((socket, sockets, io) => {
                                 }).run().then((_tokens) => {
                                     try {
                                         if (_tokens.length > 0) {
+                                            if (message.image && message.content == '') {
+                                                message.content = ' 📷 Image';
+                                            } else if (message.image && message.content){
+                                                message.content = ' 📷 ' + message.content;
+                                            }
                                             FCM.sendNotification({
                                                 tokens: _tokens,
                                                 from: FromName,

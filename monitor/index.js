@@ -283,6 +283,8 @@ myApp.controller('index', function ($scope, $http, $timeout, $uibModal, $interva
         
         socket.on('clientErrors', (clientErrors) => {
             
+            socket.emit('GetAllClientErrors', (data) => {
+            clientErrors = data;
             if(clientErrors.length > 0 && vm.clientErrors.length > 0 && clientErrors.length > vm.clientErrors.length && clientErrors[0].id != vm.clientErrors[0].id)
             {
                 playSound('new client error');
@@ -295,9 +297,13 @@ myApp.controller('index', function ($scope, $http, $timeout, $uibModal, $interva
             $timeout(function(){
                 vm.clientErrors= clientErrors;
             },0);
+            });
         });
         
         socket.on('serverErrors', (serverErrors) => {
+            socket.emit('GetAllServerErrors', (data) => {
+            serverErrors = data;
+            
             if(serverErrors.length > 0 && vm.serverErrors.length > 0 && serverErrors.length > vm.serverErrors.length && serverErrors[0].id != vm.serverErrors[0].id)
             {
                 playSound('new server error');
@@ -309,7 +315,7 @@ myApp.controller('index', function ($scope, $http, $timeout, $uibModal, $interva
             $timeout(function(){
                 vm.serverErrors = serverErrors;
             },0);
-            
+            });
         });
     
         socket.emit('monitorOn');
