@@ -19,7 +19,7 @@ this.runUserPublic = function (socket) {
                                     isOnline: true,
                                     ModifyDate: moment().format(),
                                     ModifyPicDate: moment().format(),
-                                    isTempUser: false,
+                                    isTempUser: true,
                                     publicInfo: {
                                         fullName: user.publicInfo.fullName,
                                         picture: user.publicInfo.picture
@@ -34,7 +34,7 @@ this.runUserPublic = function (socket) {
                                     return;
                                 }
                             } else {
-                                user.isTempUser = false;
+                                user.isTempUser = true;
                                 var newUser = new schema.User(user);
                                 newUser.save((function (socket) {
                                     return function (error, doc) {

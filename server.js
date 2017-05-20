@@ -65,8 +65,9 @@ io.on('connection', (socket) => {
                             changeOnlineStatus(user_result[0].id, true, socket.id);
                             updateToken(user_result[0].id, socket.handshake.query.token);
                         } else {
+                            console.log(socket.handshake.query.encryptedUid, socket.handshake.query.publicKey);
                             socket.emit('AuthenticationFailed');
-                            errorHandler.WriteError('connection => schema.User.filter', {message: 'AuthenticationFailed'});
+                            errorHandler.WriteError('connection => schema.User.filter', {message: 'AuthenticationFailed. uid: ' + socket.handshake.query.encryptedUid});
                             return;
                         }
                     } catch (e) {
@@ -107,7 +108,7 @@ io.on('connection', (socket) => {
 
 var changeOnlineStatus = function (uid, _isOnline, _socketId) {
     try {
-        schema.User.get(uid).update({ isOnline: _isOnline, lastSeen: Date.now(), socketId:_socketId }).run();
+        schema.User.get(uid).update({ isOnline: _isOnline, lastSeen: Date.now(), socketId:_socketId, isTempUser: false }).run();
         schema.friendsOnline.filter({ fid: uid }).update({ isOnline: _isOnline, lastSeen: Date.now() }).run();
     } catch (e) {
         errorHandler.WriteError('changeOnlineStatus', e);
@@ -225,11 +226,19 @@ io.on('connection', (socket) => {
 process.stdin.resume();//so the program will not close instantly
 
 function exitHandler(options, err) {
+    var FCM = require('./FCM.js');
+    FCM.sendNotification({
+        tokens: ['exRahragLso:APA91bFKbzv4w173YoxiKze7eBr8GSoAC8QF3AiY0s1tAJUeIV3AndaXt4kqcypY4hdVQLi9107zUPYmooPI62aGE8i7ftUP1-cdhhobxHW3IHx89LM4-3d3l-JP9BKqSsoHg5K0qTc5'],
+        from: 'Server',
+        content: 'Server Is DOWN!',
+        convId: '',
+        isEncrypted: false
+    });
     errorHandler.WriteError('exitHandler', 'app is closing');
     if (err) {
          errorHandler.WriteError('exitHandler', err);
     }
-    if (options.exit) process.exit();
+    //if (options.exit) process.exit();
 }
 
 //do something when app is closing

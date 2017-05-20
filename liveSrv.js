@@ -17,6 +17,10 @@ var monitorsSockets = [];
 
 io.on('connection', (socket) => {
     try {
+      if (!socket.handshake.query.convId) {
+        console.log('## socket.handshake.query.convId  -  is null or undefined - ', socket.handshake.query.convId);
+        //return; //--production
+      }
         connections++;
         var _roomId = socket.handshake.query.convId + "Call";
         socket.join(_roomId);
@@ -34,10 +38,12 @@ io.on('connection', (socket) => {
           });
           
           socket.on('join', (roomId, callback) => {
-            var socketIds = socketIdsInRoom(roomId);
-            callback(socketIds);
-            socket.join(roomId);
-            socket.room = roomId;
+            if (roomId) {
+              var socketIds = socketIdsInRoom(roomId);
+              callback(socketIds);
+              socket.join(roomId);
+              socket.room = roomId;
+            } 
             console.log('roomId' , roomId);
           });
           
@@ -116,7 +122,7 @@ function exitHandler(options, err) {
     if (err) {
          errorHandler.WriteError('exitHandler', err);
     }
-    if (options.exit) process.exit();
+    //if (options.exit) process.exit();
 }
 
 //do something when app is closing

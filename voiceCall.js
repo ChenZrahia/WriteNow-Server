@@ -11,25 +11,27 @@ this.runLiveConvs = (function(clsObj) { return function(socket, sockets, io){
     try {
         console.log(socket.handshake.query.uid + " Trying To Connect To The Server...");
         
-        socket.on('makeCall', function(callback, convId, _callType) {
+        socket.on('makeCall', function(callback, convId, _callType, isRecall) {
             try {
-                console.log('## makeCall -- ', socket.handshake.query.uid);
-                var callTypeNumber = 3;
-                if (_callType == "voice") {
-                   callTypeNumber = 1;
-                } else if (_callType == "video") {
-                   callTypeNumber = 2;
-                }
-                
-                var newChat = new schema.LiveChat({
-                    callDateTime: moment().format(),
-                    callType: callTypeNumber,
-                    callerId: socket.handshake.query.uid,
-                    receiverId: convId
-                 });
-                 newChat.save((error, doc) => {}).error(function (err){
-                    errorHandler.WriteError('runLiveConvs => makeCall.save => error', err);
-                });
+                console.log('## makeCall ', convId, _callType, isRecall);
+                if (!isRecall) {
+                    var callTypeNumber = 3;
+                    if (_callType == "voice") {
+                       callTypeNumber = 1;
+                    } else if (_callType == "video") {
+                       callTypeNumber = 2;
+                    }
+                    
+                    var newChat = new schema.LiveChat({
+                        callDateTime: moment().format(),
+                        callType: callTypeNumber,
+                        callerId: socket.handshake.query.uid,
+                        receiverId: convId
+                     });
+                     newChat.save((error, doc) => {}).error(function (err){
+                        errorHandler.WriteError('runLiveConvs => makeCall.save => error', err);
+                    });
+                } 
                 
                 schema.Conversation.get(convId).getJoin({participates: true}).pluck('participates').execute()
                 .then(function(result){

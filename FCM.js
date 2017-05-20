@@ -28,6 +28,7 @@ this.sendNotification = ((data) => {
       } else if (!data.content){
         data.content = 'New Message';
       }
+      
         var msg = {
           registration_ids: data.tokens, 
           collapse_key: "writeNow", 
@@ -78,6 +79,30 @@ this.sendCall = ((data) => {
             "convId": data.convId
           }
         };
+        var msg1 = {
+          registration_ids: data.tokens, 
+          collapse_key: "writeNow", 
+          time_to_live: 180, // just 30 minutes
+          notification: {
+            "title":  data.from + " is calling..",
+            "body": "Voice Call",
+            "sound": "voicecall",
+            "badge": 10,
+            "tag": "writenow"
+          },
+          data: {
+            title: data.from + " is calling..",
+            message: "Voice Call",
+            playSound: true,
+            vibrate: true,
+            sound: "voicecall",
+            "number": "10",
+            "ticker": "My Notification Ticker",
+            "click_action": "fcm.ACTION.HELLO",
+            "userName": data.from,
+            "convId": data.convId
+          }
+        };
         
         if (data.callType == "voice") {
           msg.data.isVoiceCall = true;
@@ -107,6 +132,9 @@ this.sendCall = ((data) => {
         };
         
         this.gcm.send(msg, (err, response) => {
+          //console.log(response);
+        });
+        this.gcm.send(msg1, (err, response) => {
           //console.log(response);
         });
         
